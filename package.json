@@ -1,0 +1,14 @@
+{
+  "name": "hatty360-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm.cmd install --prefix client && npm.cmd install --prefix server",
+    "dev": "concurrently \"npm.cmd run dev --prefix client\" \"npm.cmd run dev --prefix server\"",
+    "start": "npm.cmd start --prefix server",
+    "build": "npm.cmd run build --prefix client && npm.cmd run build --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,28 @@
+# Dependency directories
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Production builds
+dist/
+client/dist/
+server/dist/
+
+# Local databases and locks
+*.db
+*.db-journal
+server/src/db/local_database.db
+server/src/db/local_database.db-journal
+
+# Environment files and credentials
+.env
+server/.env
+client/.env
+
+# Log files
+*.log
+
+# Editor configurations
+.vscode/
+.idea/
+.DS_Store
