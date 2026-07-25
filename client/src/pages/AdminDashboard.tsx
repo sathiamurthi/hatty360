@@ -9,13 +9,57 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ user, language }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'users' | 'ads' | 'feedback' | 'draft'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'ads' | 'feedback' | 'draft' | 'campaigns'>('users');
   
   // Data lists
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [pendingAds, setPendingAds] = useState<any[]>([]);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Fundraising campaign form state
+  const [campaignTitle, setCampaignTitle] = useState('');
+  const [campaignDesc, setCampaignDesc] = useState('');
+  const [campaignTarget, setCampaignTarget] = useState('');
+  const [campaignType, setCampaignType] = useState('temple'); // 'temple', 'festival', 'felicitation'
+  const [campaignHattyId, setCampaignHattyId] = useState(user?.hatty_id ? String(user.hatty_id) : '');
+  const [hattys, setHattys] = useState<any[]>([]);
+
+  // Load hattys list for dropdown selection
+  useEffect(() => {
+    axios.get('/api/auth/hattys')
+      .then(res => setHattys(res.data.hattys))
+      .catch(err => console.error(err));
+  }, []);
+
+  const handleCreateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaignTitle || !campaignDesc || !campaignTarget) {
+      alert('All fields are required');
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post('/api/campaigns', {
+        title: campaignTitle,
+        description: campaignDesc,
+        target_amount: parseFloat(campaignTarget),
+        type: campaignType,
+        hatty_id: campaignHattyId ? parseInt(campaignHattyId) : null
+      });
+      confetti({ particleCount: 100, spread: 60 });
+      alert('Fundraising campaign successfully established!');
+      setCampaignTitle('');
+      setCampaignDesc('');
+      setCampaignTarget('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to establish fundraising campaign.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   // AI draft assist state
   const [bulletPoints, setBulletPoints] = useState('');
@@ -194,11 +238,108 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
           <Sparkles className="h-4 w-4" />
           AI Announcement Draft
         </button>
+
+        <button
+          onClick={() => setActiveTab('campaigns')}
+          className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+            activeTab === 'campaigns' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <CalendarPlus className="h-4 w-4" />
+          Fundraising Setup
+        </button>
       </div>
 
       {/* DASHBOARD CONTENT PANELS */}
       <div className="grid grid-cols-1 gap-8">
         
+        {/* PANEL 5: Fundraising Campaign Setup */}
+        {activeTab === 'campaigns' && (
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+            <h3 className="text-lg font-black text-slate-900 font-display border-b border-slate-50 pb-3">
+              Establish New Fundraising Campaign
+            </h3>
+
+            <form onSubmit={handleCreateCampaign} className="space-y-4 max-w-2xl">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Campaign Title</label>
+                <input
+                  type="text"
+                  required
+                  value={campaignTitle}
+                  onChange={(e) => setCampaignTitle(e.target.value)}
+                  placeholder="e.g. Balacola Mariamman Temple Restoration Fund"
+                  className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Description & Purpose</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={campaignDesc}
+                  onChange={(e) => setCampaignDesc(e.target.value)}
+                  placeholder="Describe what the funds will be used for..."
+                  className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium leading-relaxed"
+                ></textarea>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Target Amount (₹)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={campaignTarget}
+                    onChange={(e) => setCampaignTarget(e.target.value)}
+                    placeholder="e.g. 500000"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Campaign Type</label>
+                  <select
+                    value={campaignType}
+                    onChange={(e) => setCampaignType(e.target.value)}
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium bg-white"
+                  >
+                    <option value="temple">Temple Construction</option>
+                    <option value="festival">Festival Celebration</option>
+                    <option value="felicitation">Student Felicitation</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Associated Hatty</label>
+                  <select
+                    disabled={user?.role !== 'Admin'}
+                    value={campaignHattyId}
+                    onChange={(e) => setCampaignHattyId(e.target.value)}
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium bg-white disabled:bg-slate-50 disabled:text-slate-400"
+                  >
+                    <option value="">Community-Wide (None)</option>
+                    {hattys.map(h => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex items-center justify-center gap-1.5 py-4 px-6 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl text-xs transition-all shadow-md cursor-pointer border uppercase tracking-wider font-display"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                {loading ? 'Creating Campaign...' : 'Establish Campaign'}
+              </button>
+            </form>
+          </div>
+        )}
+
         {/* PANEL 1: Member Approvals */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">

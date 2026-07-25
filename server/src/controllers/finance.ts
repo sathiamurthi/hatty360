@@ -17,6 +17,24 @@ export async function getCampaigns(req: Request, res: Response) {
   }
 }
 
+export async function createCampaign(req: Request, res: Response) {
+  const { title, description, target_amount, type, hatty_id } = req.body;
+  if (!title || !description || !target_amount || !type) {
+    return res.status(400).json({ error: 'Title, description, target amount, and type are required' });
+  }
+
+  try {
+    const result = await query(
+      `INSERT INTO fundraising_campaigns (title, description, target_amount, raised_amount, type, hatty_id) 
+       VALUES ($1, $2, $3, 0.00, $4, $5) RETURNING *`,
+      [title, description, target_amount, type, hatty_id || null]
+    );
+    res.status(201).json({ success: true, campaign: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function getCampaignDetails(req: Request, res: Response) {
   const { id } = req.params;
   try {

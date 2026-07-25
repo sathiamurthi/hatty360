@@ -67,6 +67,7 @@ async function startServer() {
     // Campaigns & Donations
     app.get('/api/campaigns', fin.getCampaigns);
     app.get('/api/campaigns/:id', fin.getCampaignDetails);
+    app.post('/api/campaigns', fin.createCampaign);
     app.post('/api/donations', fin.createDonation);
 
     // Women's Groups (SHGs)
