@@ -308,3 +308,44 @@ INSERT INTO ads (advertiser_id, title, description, ad_type, status, price, dura
 (1, '10% Discount on Wedding Hall Bookings', 'Exclusive discount for community families booking for marriage ceremonies between Aug-Oct 2026.', 'coupon', 'approved', 500.00, 8),
 (2, 'Complete Vachana Samputa Collection', 'Hardcover compilation of Veerashaiva teachings. Doorstep delivery available across Nilgiris.', 'banner', 'approved', 200.00, 4)
 ON CONFLICT DO NOTHING;
+
+-- 16. Community Groups
+CREATE TABLE IF NOT EXISTS community_groups (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  privacy TEXT NOT NULL DEFAULT 'public', -- 'public', 'private'
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 17. Threads inside groups
+CREATE TABLE IF NOT EXISTS threads (
+  id SERIAL PRIMARY KEY,
+  group_id INTEGER REFERENCES community_groups(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active', -- 'active', 'archived', 'pinned'
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 18. Replies inside threads
+CREATE TABLE IF NOT EXISTS thread_replies (
+  id SERIAL PRIMARY KEY,
+  thread_id INTEGER REFERENCES threads(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 19. Helpline Contacts
+CREATE TABLE IF NOT EXISTS helpline_contacts (
+  id SERIAL PRIMARY KEY,
+  contact_person TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  purpose TEXT NOT NULL,
+  hatty_id INTEGER REFERENCES hattys(id) ON DELETE CASCADE,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HelpCircle, Briefcase, Plus, HeartPulse, DollarSign, ExternalLink, Send, Search, MapPin, EyeOff } from 'lucide-react';
+import { HelpCircle, Briefcase, Plus, HeartPulse, DollarSign, ExternalLink, Send, Search, MapPin, EyeOff, Trash, Phone } from 'lucide-react';
 import axios from 'axios';
 import confetti from 'canvas-confetti';
 
@@ -27,9 +27,67 @@ export default function HelpBoard({ user, language }: HelpBoardProps) {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiResults, setAiResults] = useState<any>(null);
 
+  // Helpline Directory State
+  const [helplines, setHelplines] = useState<any[]>([]);
+  const [showHelplineForm, setShowHelplineForm] = useState(false);
+  const [helplinePerson, setHelplinePerson] = useState('');
+  const [helplinePhone, setHelplinePhone] = useState('');
+  const [helplinePurpose, setHelplinePurpose] = useState('');
+  const [helplineHattyId, setHelplineHattyId] = useState('');
+  const [hattys, setHattys] = useState<any[]>([]);
+
   useEffect(() => {
     fetchPosts();
+    fetchHelplines();
+    // Load hattys for helpline form
+    axios.get('/api/auth/hattys')
+      .then(res => setHattys(res.data.hattys))
+      .catch(err => console.error(err));
   }, [categoryFilter]);
+
+  const fetchHelplines = async () => {
+    try {
+      const res = await axios.get('/api/helpline');
+      setHelplines(res.data.helplines);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleHelplineSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!helplinePerson || !helplinePhone || !helplinePurpose) return;
+    try {
+      await axios.post('/api/helpline', {
+        contact_person: helplinePerson,
+        phone: helplinePhone,
+        purpose: helplinePurpose,
+        hatty_id: helplineHattyId ? parseInt(helplineHattyId) : null,
+        created_by: user.id
+      });
+      setHelplinePerson('');
+      setHelplinePhone('');
+      setHelplinePurpose('');
+      setHelplineHattyId('');
+      setShowHelplineForm(false);
+      confetti({ particleCount: 60, spread: 60 });
+      fetchHelplines();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add helpline contact.');
+    }
+  };
+
+  const handleHelplineDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to remove this helpline contact?')) return;
+    try {
+      await axios.delete(`/api/helpline/${id}`);
+      fetchHelplines();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete helpline contact.');
+    }
+  };
 
   const fetchPosts = async () => {
     setLoading(true);
@@ -348,8 +406,130 @@ export default function HelpBoard({ user, language }: HelpBoardProps) {
           )}
         </div>
 
-        {/* Right Column: AI External Job Search */}
+        {/* Right Column: Helpline Directory & AI Job Search */}
         <div className="lg:col-span-4 space-y-6">
+          
+          {/* Helpline Directory Card */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+              <div>
+                <h3 className="text-lg font-extrabold text-slate-900 tracking-tight font-display flex items-center gap-2">
+                  ☎️
+                  Helpline Directory
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-1 leading-normal">
+                  Welfare & emergency contacts setup by Thalaivars & Admins.
+                </p>
+              </div>
+              {(user?.role === 'Admin' || user?.role === 'Thalaivar') && (
+                <button
+                  onClick={() => setShowHelplineForm(!showHelplineForm)}
+                  className="text-[10px] font-black text-brand-green bg-brand-green/5 border border-brand-green/10 hover:bg-brand-green/10 px-2.5 py-1 rounded-lg uppercase tracking-wider cursor-pointer"
+                >
+                  {showHelplineForm ? 'Close' : 'Add Info'}
+                </button>
+              )}
+            </div>
+
+            {/* Helpline form */}
+            {showHelplineForm && (
+              <form onSubmit={handleHelplineSubmit} className="space-y-3 p-3 bg-slate-50 rounded-2xl animate-slideDown">
+                <div>
+                  <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    required
+                    value={helplinePerson}
+                    onChange={(e) => setHelplinePerson(e.target.value)}
+                    placeholder="e.g. Shiva Gowda (Ambulance)"
+                    className="block w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={helplinePhone}
+                    onChange={(e) => setHelplinePhone(e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    className="block w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Purpose / Service</label>
+                  <input
+                    type="text"
+                    required
+                    value={helplinePurpose}
+                    onChange={(e) => setHelplinePurpose(e.target.value)}
+                    placeholder="e.g. Ooty Hospital Driver"
+                    className="block w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Hatty (Optional)</label>
+                  <select
+                    value={helplineHattyId}
+                    onChange={(e) => setHelplineHattyId(e.target.value)}
+                    className="block w-full px-2.5 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none bg-white"
+                  >
+                    <option value="">Community-Wide (None)</option>
+                    {hattys.map(h => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-brand-green hover:bg-brand-green-dark text-white rounded-lg text-[10px] font-black uppercase tracking-wider cursor-pointer"
+                >
+                  Establish Helpline
+                </button>
+              </form>
+            )}
+
+            {/* Helpline List */}
+            {helplines.length === 0 ? (
+              <p className="text-[11px] text-slate-400 font-medium py-3 text-center">No helplines currently configured.</p>
+            ) : (
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
+                {helplines.map((h) => (
+                  <div key={h.id} className="border border-slate-100 rounded-2xl p-3 flex items-center justify-between hover:border-slate-200 transition-colors bg-white">
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">
+                        {h.purpose}
+                      </span>
+                      <h4 className="text-xs font-bold text-slate-900 leading-tight">{h.contact_person}</h4>
+                      <span className="text-[9px] font-black text-brand-green bg-brand-green/5 border border-brand-green/10 px-1.5 py-0.5 rounded uppercase tracking-wider inline-block">
+                        {h.hatty_name ? `${h.hatty_name} Hatty` : 'Community-Wide'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`tel:${h.phone}`}
+                        className="p-2 bg-slate-50 border border-slate-100 hover:bg-slate-100 text-slate-700 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
+                        title={`Call ${h.contact_person}`}
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                      </a>
+                      {(user?.role === 'Admin' || user?.role === 'Thalaivar') && (
+                        <button
+                          onClick={() => handleHelplineDelete(h.id)}
+                          className="p-2 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-600 rounded-xl transition-colors cursor-pointer flex items-center justify-center"
+                          title="Delete Helpline"
+                        >
+                          <Trash className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5">
             <div>
               <h3 className="text-lg font-extrabold text-slate-900 tracking-tight font-display flex items-center gap-2">

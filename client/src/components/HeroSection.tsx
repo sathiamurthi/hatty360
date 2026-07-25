@@ -13,7 +13,7 @@ export default function HeroSection({ onSearch, onActionClick, language }: HeroS
 
   const t = {
     en: {
-      headline: "Leading Lingayat Community Network, Connecting the 8 Hattys.",
+      headline: "Community Platform — Connect, Share & Grow Together",
       subhead: "The digital engine behind communication, governance, fundraising, and family collaboration.",
       trusted: "Trusted by 10,000+ community members across the Nilgiris.",
       searchPlaceholder: "Search members, professions, or Vachanas...",
@@ -55,7 +55,7 @@ export default function HeroSection({ onSearch, onActionClick, language }: HeroS
       card2Btn: "நிதி வழங்கு",
     },
     bd: {
-      headline: "Leading Lingayat Community Network, Connecting the 8 Hattys.",
+      headline: "Community Platform — Connect, Share & Grow Together",
       subhead: "The digital engine behind communication, governance, fundraising, and family collaboration.",
       trusted: "Trusted by 10,000+ community members across the Nilgiris.",
       searchPlaceholder: "Search members, professions, or Vachanas...",
@@ -69,7 +69,7 @@ export default function HeroSection({ onSearch, onActionClick, language }: HeroS
       card2Btn: "Post a Donation",
     }
   }[language as 'en'|'kn'|'ta'|'bd'] || {
-    headline: "Leading Lingayat Community Network, Connecting the 8 Hattys.",
+    headline: "Community Platform — Connect, Share & Grow Together",
     subhead: "The digital engine behind communication, governance, fundraising, and family collaboration.",
     trusted: "Trusted by 10,000+ community members across the Nilgiris.",
     searchPlaceholder: "Search members, professions, or Vachanas...",

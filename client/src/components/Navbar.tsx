@@ -29,6 +29,7 @@ export default function Navbar({
     { name: { en: 'Vachana Library', kn: 'ವಚನ ಗ್ರಂಥಾಲಯ', ta: 'வச்சன நூலகம்', bd: 'Vachana' }, id: 'vachana' },
     { name: { en: 'Fundraising', kn: 'ದೇಣಿಗೆ ಸಂಗ್ರಹ', ta: 'நிதி திரட்டல்', bd: 'Fundraising' }, id: 'fundraising' },
     { name: { en: 'Help Board', kn: 'ಸಹಾಯ ಬೋರ್ಡ್', ta: 'உதவி பலகை', bd: 'Help Board' }, id: 'help' },
+    { name: { en: 'Groups', kn: 'ಗುಂಪುಗಳು', ta: 'குழுக்கள்', bd: 'Groups' }, id: 'groups' },
     { name: { en: 'Women\'s SHG', kn: 'ಮಹಿಳಾ ಸಂಘ', ta: 'மகளிர் குழு', bd: 'Women\'s SHG' }, id: 'shg' },
     { name: { en: 'Issues', kn: 'ಸಮಸ್ಯೆಗಳು', ta: 'புகார்கள்', bd: 'Issues' }, id: 'issues' },
   ];
@@ -61,7 +62,7 @@ export default function Navbar({
               </div>
               <div>
                 <span className="text-slate-900 font-extrabold text-xl tracking-tight font-display block">Hatty360</span>
-                <span className="text-[10px] text-brand-green font-semibold tracking-wider uppercase block -mt-1">Lingayat Community</span>
+                <span className="text-[9px] text-brand-green font-bold tracking-wider uppercase block -mt-1">Community Platform — Connect, Share & Grow Together</span>
               </div>
             </div>
             

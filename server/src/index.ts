@@ -7,6 +7,8 @@ import * as comm from './controllers/community';
 import * as fin from './controllers/finance';
 import * as gov from './controllers/governance';
 import * as ai from './controllers/ai';
+import * as groups from './controllers/groups';
+import * as helpline from './controllers/helpline';
 
 import * as path from 'path';
 
@@ -96,6 +98,20 @@ async function startServer() {
     // AI Assistant
     app.post('/api/ai/chat', ai.chatbot);
     app.post('/api/ai/draft-assist', ai.draftAssist);
+
+    // Community Groups & Discussion Threads
+    app.get('/api/groups', groups.getGroups);
+    app.post('/api/groups', groups.createGroup);
+    app.get('/api/groups/:id', groups.getGroupDetails);
+    app.post('/api/groups/:id/threads', groups.createThread);
+    app.get('/api/threads/:id', groups.getThreadDetails);
+    app.post('/api/threads/:id/replies', groups.createReply);
+    app.post('/api/threads/:id/status', groups.updateThreadStatus);
+
+    // Helpline Contacts
+    app.get('/api/helpline', helpline.getHelplines);
+    app.post('/api/helpline', helpline.createHelpline);
+    app.delete('/api/helpline/:id', helpline.deleteHelpline);
 
     // Start listening
     app.listen(port, () => {

@@ -12,6 +12,7 @@ import WomensGroup from './pages/WomensGroup';
 import IssueReporting from './pages/IssueReporting';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
+import Groups from './pages/Groups';
 import axios from 'axios';
 
 export default function App() {
@@ -81,6 +82,7 @@ export default function App() {
             {tab === 'vachana' && <VachanaLibrary language={language} />}
             {tab === 'fundraising' && <Fundraising user={user} language={language} />}
             {tab === 'help' && <HelpBoard user={user} language={language} />}
+            {tab === 'groups' && <Groups user={user} language={language} />}
             {tab === 'shg' && <WomensGroup user={user} language={language} />}
             {tab === 'issues' && <IssueReporting user={user} language={language} />}
             {tab === 'admin' && <AdminDashboard user={user} language={language} />}
