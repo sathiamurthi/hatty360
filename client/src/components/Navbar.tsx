@@ -119,7 +119,7 @@ export default function Navbar({
             {user ? (
               <div className="flex items-center space-x-3">
                 {/* Admin/Thalaivar Dashboard Link */}
-                {(user.role === 'Admin' || user.role === 'Thalaivar' || user.role === 'Secretary') && (
+                {(user.role === 'Admin' || user.role === 'Thalaivar' || user.role === 'Secretary' || user.role === 'Finance Secretary') && (
                   <button
                     onClick={() => setTab('admin')}
                     className={`p-2 rounded-lg transition-colors relative group ${
@@ -201,7 +201,7 @@ export default function Navbar({
               {t(item.name)}
             </button>
           ))}
-          {user && (user.role === 'Admin' || user.role === 'Thalaivar' || user.role === 'Secretary') && (
+          {user && (user.role === 'Admin' || user.role === 'Thalaivar' || user.role === 'Secretary' || user.role === 'Finance Secretary') && (
             <button
               onClick={() => {
                 setTab('admin');
