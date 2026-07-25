@@ -57,7 +57,7 @@ export async function register(req: Request, res: Response) {
 
 // Complete profile
 export async function updateProfile(req: Request, res: Response) {
-  const { phone, hatty_id, gender, father_name, mother_name, profession, location, selected_language } = req.body;
+  const { phone, hatty_id, gender, father_name, mother_name, profession, location, selected_language, name } = req.body;
   if (!phone) {
     return res.status(400).json({ error: 'Phone number is required to locate profile' });
   }
@@ -71,9 +71,10 @@ export async function updateProfile(req: Request, res: Response) {
         mother_name = COALESCE($4, mother_name), 
         profession = COALESCE($5, profession), 
         location = COALESCE($6, location),
-        selected_language = COALESCE($7, selected_language)
-       WHERE phone = $8 RETURNING *`,
-      [hatty_id, gender, father_name, mother_name, profession, location, selected_language, phone]
+        selected_language = COALESCE($7, selected_language),
+        name = COALESCE($8, name)
+       WHERE phone = $9 RETURNING *`,
+      [hatty_id, gender, father_name, mother_name, profession, location, selected_language, name, phone]
     );
 
     if (result.rows.length === 0) {

@@ -11,6 +11,7 @@ import Fundraising from './pages/Fundraising';
 import WomensGroup from './pages/WomensGroup';
 import IssueReporting from './pages/IssueReporting';
 import AdminDashboard from './pages/AdminDashboard';
+import Profile from './pages/Profile';
 import axios from 'axios';
 
 export default function App() {
@@ -83,6 +84,7 @@ export default function App() {
             {tab === 'shg' && <WomensGroup user={user} language={language} />}
             {tab === 'issues' && <IssueReporting user={user} language={language} />}
             {tab === 'admin' && <AdminDashboard user={user} language={language} />}
+            {tab === 'profile' && <Profile user={user} onProfileUpdate={(updatedUser) => setUser(updatedUser)} language={language} />}
           </div>
         </div>
       ) : (

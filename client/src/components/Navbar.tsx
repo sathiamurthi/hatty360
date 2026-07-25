@@ -132,17 +132,23 @@ export default function Navbar({
                   </button>
                 )}
 
-                {/* Profile Card Summary */}
-                <div className="hidden md:flex flex-col text-right">
-                  <span className="text-xs font-semibold text-slate-900 leading-tight">{user.name}</span>
-                  <span className="text-[10px] text-slate-500 font-medium">
-                    {user.role} • {user.hatty_name || 'No Hatty'}
-                  </span>
-                </div>
+                {/* Profile Card Summary & Avatar */}
+                <button
+                  onClick={() => setTab('profile')}
+                  className="flex items-center space-x-3 cursor-pointer text-left focus:outline-none hover:opacity-80 transition-opacity"
+                  title="View / Edit Profile"
+                >
+                  <div className="hidden md:flex flex-col text-right">
+                    <span className="text-xs font-semibold text-slate-900 leading-tight">{user.name}</span>
+                    <span className="text-[10px] text-slate-500 font-medium text-slate-400">
+                      {user.role} • {user.hatty_name || 'No Hatty'}
+                    </span>
+                  </div>
 
-                <div className="h-8 w-8 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-bold text-sm border border-brand-green/20">
-                  {user.name.charAt(0)}
-                </div>
+                  <div className="h-8 w-8 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-bold text-sm border border-brand-green/20">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                </button>
 
                 <button
                   onClick={onLogout}
