@@ -21,8 +21,10 @@ export default function App() {
 
   // Sync Axios base URL for local development proxy or absolute Render/Vercel URL
   useEffect(() => {
-    // For Vercel production deployment, check if we need custom api routing
-    if (window.location.hostname !== 'localhost') {
+    const envApiUrl = import.meta.env.VITE_API_URL;
+    if (envApiUrl) {
+      axios.defaults.baseURL = envApiUrl;
+    } else if (window.location.hostname !== 'localhost') {
       axios.defaults.baseURL = window.location.origin;
     }
   }, []);
