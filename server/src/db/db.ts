@@ -3,6 +3,11 @@ import * as sqlite3 from 'sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import * as dotenv from 'dotenv';
+
+// Load env variables
+dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+
 let pgPool: Pool | null = null;
 let sqliteDb: sqlite3.Database | null = null;
 let isPostgres = false;

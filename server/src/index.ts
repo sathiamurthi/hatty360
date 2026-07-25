@@ -8,8 +8,10 @@ import * as fin from './controllers/finance';
 import * as gov from './controllers/governance';
 import * as ai from './controllers/ai';
 
+import * as path from 'path';
+
 // Load env variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const app = express();
 const port = process.env.PORT || 5000;
