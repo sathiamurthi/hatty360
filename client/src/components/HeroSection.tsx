@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Briefcase, Users, Flame } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
 
 interface HeroSectionProps {
   onSearch: (query: string, filter: string) => void;
@@ -91,20 +91,20 @@ export default function HeroSection({ onSearch, onActionClick, language }: HeroS
   return (
     <div className="relative bg-gradient-hero overflow-hidden dots-grid py-12 md:py-20 lg:py-24 text-white font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        <div className="flex flex-col items-center justify-center text-center max-w-4xl mx-auto">
           
-          {/* Left Column: Heading and Search Container */}
-          <div className="lg:col-span-7 flex flex-col justify-center">
+          {/* Heading and Search Container */}
+          <div className="w-full flex flex-col items-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight font-display mb-4 text-white leading-tight leading-[1.05]">
               {t.headline}
             </h1>
             
-            <p className="text-lg md:text-xl text-emerald-100 max-w-xl mb-8 leading-relaxed font-light">
+            <p className="text-lg md:text-xl text-emerald-100 max-w-2xl mb-8 leading-relaxed font-light">
               {t.subhead}
             </p>
 
             {/* Search Bar - Exactly matching reference styling */}
-            <form onSubmit={handleSearchSubmit} className="bg-white rounded-2xl md:rounded-full p-2 shadow-2xl flex flex-col md:flex-row items-stretch gap-2 max-w-2xl text-slate-800">
+            <form onSubmit={handleSearchSubmit} className="bg-white rounded-2xl md:rounded-full p-2 shadow-2xl flex flex-col md:flex-row items-stretch gap-2 w-full max-w-2xl text-slate-800 text-left">
               {/* Search query input */}
               <div className="flex-1 flex items-center px-3 border-b md:border-b-0 md:border-r border-slate-100">
                 <Search className="h-5 w-5 text-slate-400 mr-2 flex-shrink-0" />
@@ -140,67 +140,10 @@ export default function HeroSection({ onSearch, onActionClick, language }: HeroS
             </form>
 
             {/* Trusted Stamp */}
-            <p className="text-xs text-emerald-200 mt-6 font-semibold tracking-wide flex items-center gap-2">
+            <p className="text-xs text-emerald-200 mt-6 font-semibold tracking-wide flex items-center gap-2 justify-center">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-green-light animate-pulse"></span>
               {t.trusted}
             </p>
-          </div>
-
-          {/* Right Column: Dynamic Rounded Cards (Find Jobs / Find Talent style) */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            
-            {/* Card 1: Register (White BG) */}
-            <div className="bg-white text-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden transform hover:-translate-y-1 transition-all duration-300 border border-slate-100 group">
-              {/* Decorative Corner Blobs */}
-              <div className="absolute top-0 right-0 h-28 w-28 bg-emerald-50 rounded-full -mr-12 -mt-12 opacity-80 group-hover:scale-110 transition-transform duration-300"></div>
-              
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                  <div className="h-12 w-12 rounded-2xl bg-brand-green/10 text-brand-green flex items-center justify-center mb-6">
-                    <Briefcase className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight font-display mb-3">
-                    {t.card1Title}
-                  </h3>
-                  <p className="text-sm text-slate-600 leading-relaxed mb-6 font-medium">
-                    {t.card1Text}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onActionClick('register')}
-                  className="bg-brand-dark hover:bg-slate-900 text-white font-bold py-4 px-6 rounded-2xl w-full text-center transition-all shadow-lg hover:shadow-emerald-950/20 font-display tracking-wide text-sm cursor-pointer border border-brand-green-light/20"
-                >
-                  {t.card1Btn}
-                </button>
-              </div>
-            </div>
-
-            {/* Card 2: Donate (Blue BG) */}
-            <div className="bg-gradient-to-br from-brand-blue to-brand-blue-dark text-white rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden transform hover:-translate-y-1 transition-all duration-300 group border border-white/5">
-              {/* Decorative Corner Blob */}
-              <div className="absolute bottom-0 right-0 h-32 w-32 bg-brand-blue-light/10 rounded-full -mr-10 -mb-10 opacity-70 group-hover:scale-110 transition-transform duration-300"></div>
-              
-              <div className="relative z-10 flex flex-col h-full justify-between">
-                <div>
-                  <div className="h-12 w-12 rounded-2xl bg-white/15 text-white flex items-center justify-center mb-6">
-                    <Users className="h-6 w-6" />
-                  </div>
-                  <h3 className="text-2xl font-extrabold tracking-tight font-display mb-3">
-                    {t.card2Title}
-                  </h3>
-                  <p className="text-sm text-blue-100 leading-relaxed mb-6 font-light">
-                    {t.card2Text}
-                  </p>
-                </div>
-                <button
-                  onClick={() => onActionClick('donate')}
-                  className="bg-brand-dark hover:bg-slate-950 text-white font-bold py-4 px-6 rounded-2xl w-full text-center transition-all shadow-lg hover:shadow-black/30 font-display tracking-wide text-sm cursor-pointer border border-brand-green/30 hover:border-brand-green-light"
-                >
-                  {t.card2Btn}
-                </button>
-              </div>
-            </div>
-
           </div>
 
         </div>
