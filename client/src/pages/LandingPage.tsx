@@ -3,6 +3,8 @@ import { Megaphone, Calendar, Tag, Star, Send, MapPin, Check, Plus, MessageSquar
 import axios from 'axios';
 import confetti from 'canvas-confetti';
 
+const Marquee = 'marquee' as any;
+
 interface LandingPageProps {
   user: any;
   language: string;
@@ -14,6 +16,8 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   const [events, setEvents] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
   const [rsvps, setRsvps] = useState<{[key: number]: string}>({});
+  const [offers, setOffers] = useState<any[]>([]);
+  const [lifeEvents, setLifeEvents] = useState<any[]>([]);
   
   // Feedback state
   const [rating, setRating] = useState(5);
@@ -138,6 +142,12 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
 
       const adsRes = await axios.get('/api/ads');
       setAds(adsRes.data.ads);
+
+      const offersRes = await axios.get('/api/offers', { params: { activeOnly: 'true' } });
+      setOffers(offersRes.data.offers || []);
+
+      const leRes = await axios.get('/api/life-events', { params: { hatty_id: hattyId } });
+      setLifeEvents(leRes.data.lifeEvents || []);
       
       // Load user RSVPs
       if (user && evRes.data.events.length > 0) {
@@ -232,6 +242,30 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
       
+      {/* Sponsor Offers Moving Ticker Banner */}
+      {offers.length > 0 && (
+        <div className="mb-6 bg-slate-950 text-white py-3 px-4 rounded-2xl shadow-md border border-slate-800 flex items-center gap-3 text-xs font-bold font-sans relative overflow-hidden">
+          <div className="bg-amber-500 text-slate-950 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 z-10 shadow-sm">
+            ⚡ Special Offers
+          </div>
+          <Marquee className="flex-grow text-slate-300" scrollamount="4">
+            <span className="flex gap-16 items-center">
+              {offers.map((o: any, idx: number) => (
+                <span key={idx} className="inline-flex items-center gap-2 mr-8">
+                  <span className="text-amber-400 font-extrabold">{o.business_name}</span>
+                  <span className="text-slate-100 font-medium">— {o.offer_title}</span>
+                  {o.coupon_code && (
+                    <span className="bg-slate-800 border border-slate-700 text-amber-300 font-mono px-1.5 py-0.5 rounded text-[10px]">
+                      CODE: {o.coupon_code}
+                    </span>
+                  )}
+                </span>
+              ))}
+            </span>
+          </Marquee>
+        </div>
+      )}
+
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-brand-green/10 via-brand-blue/5 to-slate-50 border border-slate-100 rounded-3xl p-6 md:p-8 mb-8 shadow-sm relative overflow-hidden">
         <div className="absolute -right-24 -bottom-24 h-48 w-48 rounded-full bg-brand-green/5"></div>
@@ -289,11 +323,89 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
               ))}
             </div>
           )}
+          {/* Sponsor Offers Coupons Section */}
+          {offers.length > 0 && (
+            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 mt-8">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 font-display flex items-center gap-2">
+                  🏷️ Exclusive Community Discounts & Offers
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  Supporting local businesses. Present these coupons at the merchant shop to avail discounts.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {offers.map((o: any) => (
+                  <div key={o.id} className="border border-dashed border-slate-200 rounded-2xl p-4 flex flex-col justify-between hover:border-slate-300 bg-slate-50/20 relative group">
+                    <div className="absolute top-0 right-0 h-4 w-4 bg-white border-l border-b border-dashed border-slate-200 rounded-bl-lg"></div>
+                    
+                    <div className="space-y-1.5">
+                      <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{o.business_name}</span>
+                      <h4 className="text-xs font-black text-slate-900 leading-tight">{o.offer_title}</h4>
+                      {o.offer_description && <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">{o.offer_description}</p>}
+                    </div>
+
+                    {o.coupon_code && (
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <span className="font-mono text-xs font-black bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg select-all border border-slate-200">
+                          {o.coupon_code}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(o.coupon_code);
+                            alert(`Coupon code "${o.coupon_code}" copied to clipboard!`);
+                          }}
+                          className="text-[10px] font-bold text-brand-green hover:underline cursor-pointer border border-transparent bg-transparent"
+                        >
+                          Copy Code
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Events & Sponsored Ads & Feedback */}
         <div className="lg:col-span-4 space-y-8">
           
+          {/* Life Events (Birthdays & Obituaries) Feed Card */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4 animate-fadeIn">
+            <h3 className="text-lg font-extrabold text-slate-900 tracking-tight font-display flex items-center gap-2 border-b border-slate-50 pb-3">
+              🎉 Life Occasions & Notices
+            </h3>
+
+            {lifeEvents.length === 0 ? (
+              <p className="text-xs text-slate-400 font-medium py-2 text-center">No special birthday or obituary announcements today.</p>
+            ) : (
+              <div className="space-y-4">
+                {lifeEvents.map((le: any) => (
+                  <div key={le.id} className={`p-4 rounded-2xl border flex gap-3 ${le.type === 'birthday' ? 'bg-amber-50/30 border-amber-100/60' : 'bg-red-50/10 border-red-100/30'}`}>
+                    <div className="text-2xl shrink-0">
+                      {le.type === 'birthday' ? '🎂' : '🕊️'}
+                    </div>
+                    <div className="space-y-1 flex-grow">
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${le.type === 'birthday' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-800'}`}>
+                          {le.type === 'birthday' ? 'Birthday' : 'Obituary'}
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-semibold">
+                          {new Date(le.date_of_event).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-black text-slate-900 leading-tight">{le.person_name}</h4>
+                      {le.description && <p className="text-[10px] text-slate-500 font-medium leading-relaxed">{le.description}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Events Card */}
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <h3 className="text-lg font-extrabold text-slate-900 tracking-tight font-display flex items-center gap-2 border-b border-slate-50 pb-3">

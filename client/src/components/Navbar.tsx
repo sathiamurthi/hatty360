@@ -30,6 +30,7 @@ export default function Navbar({
     { name: { en: 'Fundraising', kn: 'ದೇಣಿಗೆ ಸಂಗ್ರಹ', ta: 'நிதி திரட்டல்', bd: 'Fundraising' }, id: 'fundraising' },
     { name: { en: 'Help Board', kn: 'ಸಹಾಯ ಬೋರ್ಡ್', ta: 'உதவி பலகை', bd: 'Help Board' }, id: 'help' },
     { name: { en: 'Groups', kn: 'ಗುಂಪುಗಳು', ta: 'குழுக்கள்', bd: 'Groups' }, id: 'groups' },
+    { name: { en: 'Talents Showcase', kn: 'ಪ್ರತಿಭಾ ಪ್ರದರ್ಶನ', ta: 'திறமைகள்', bd: 'Talents' }, id: 'talents' },
     { name: { en: 'Women\'s SHG', kn: 'ಮಹಿಳಾ ಸಂಘ', ta: 'மகளிர் குழு', bd: 'Women\'s SHG' }, id: 'shg' },
     { name: { en: 'Issues', kn: 'ಸಮಸ್ಯೆಗಳು', ta: 'புகார்கள்', bd: 'Issues' }, id: 'issues' },
   ];

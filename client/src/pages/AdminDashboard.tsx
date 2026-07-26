@@ -9,7 +9,7 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ user, language }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'users' | 'ads' | 'feedback' | 'draft' | 'campaigns' | 'roles' | 'villages'>('users');
+  const [activeTab, setActiveTab] = useState<string>('users');
   
   // Data lists
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
@@ -35,6 +35,23 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
   const [directRole, setDirectRole] = useState('Member');
   const [directCustomRole, setDirectCustomRole] = useState('');
   const [approvalHattyFilter, setApprovalHattyFilter] = useState(() => (user?.role === 'Admin' || user?.role === 'SuperAdmin') ? 'all' : String(user?.hatty_id || 'all'));
+
+  // Sponsor Offers CRUD States
+  const [offersList, setOffersList] = useState<any[]>([]);
+  const [offerBusiness, setOfferBusiness] = useState('');
+  const [offerTitle, setOfferTitle] = useState('');
+  const [offerDesc, setOfferDesc] = useState('');
+  const [offerCoupon, setOfferCoupon] = useState('');
+
+  // Life Events Composer States
+  const [lifeEventType, setLifeEventType] = useState<'birthday' | 'obituary'>('birthday');
+  const [lifeEventPerson, setLifeEventPerson] = useState('');
+  const [lifeEventDate, setLifeEventDate] = useState('');
+  const [lifeEventDesc, setLifeEventDesc] = useState('');
+  const [lifeEventTargets, setLifeEventTargets] = useState<number[]>([]);
+
+  // Admin Group Scope config state
+  const [adminManagedGroups, setAdminManagedGroups] = useState<number[]>(user?.managed_hatty_ids || []);
 
   // Fundraising campaign form state
   const [campaignTitle, setCampaignTitle] = useState('');
@@ -228,6 +245,9 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
       } else if (activeTab === 'villages') {
         const res = await axios.get('/api/auth/hattys');
         setHattys(res.data.hattys || []);
+      } else if (activeTab === 'offers') {
+        const res = await axios.get('/api/offers');
+        setOffersList(res.data.offers || []);
       }
     } catch (err) {
       console.error(err);
@@ -279,6 +299,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
     if (!aiDraftContent) return;
     setLoading(true);
     try {
+      const targetIds = (user?.role === 'Admin' || user?.role === 'SuperAdmin') ? user?.managed_hatty_ids : [user?.hatty_id];
       if (draftType === 'event') {
         await axios.post('/api/events', {
           title: aiDraftTitle || 'Community Event',
@@ -288,7 +309,8 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
           location: eventLocation || 'Community Hall',
           hatty_id: user.role === 'Admin' ? null : user.hatty_id,
           type: user.role === 'Admin' ? 'community' : 'hatty',
-          created_by: user.name
+          created_by: user.name,
+          target_hatty_ids: targetIds
         });
       } else {
         await axios.post('/api/announcements', {
@@ -296,7 +318,8 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
           content: aiDraftContent,
           type: user.role === 'Admin' ? 'community' : 'hatty',
           hatty_id: user.role === 'Admin' ? null : user.hatty_id,
-          created_by: user.name
+          created_by: user.name,
+          target_hatty_ids: targetIds
         });
       }
       setBulletPoints('');
@@ -371,6 +394,14 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
                 >
                   🏘️ Village Config
                 </button>
+                <button
+                  onClick={() => setActiveTab('offers')}
+                  className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'offers' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  🏷️ Sponsor Offers
+                </button>
               </>
             )}
             <button
@@ -381,6 +412,14 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
             >
               <Star className="h-4 w-4" />
               Feedback Hub ({feedbacks.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('group_config')}
+              className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'group_config' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              ⚙️ My Village Group
             </button>
           </>
         )}
@@ -1142,6 +1181,354 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* PANEL: Sponsor Offers (SuperAdmin only) */}
+        {activeTab === 'offers' && user?.role === 'SuperAdmin' && (
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6 animate-fadeIn">
+            <h3 className="text-lg font-black text-slate-900 font-display border-b border-slate-50 pb-3">
+              🏷️ Manage Sponsor Coupons & Offers
+            </h3>
+
+            {/* Create Offer Form */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!offerBusiness || !offerTitle) return alert('Business name and title are required.');
+                try {
+                  await axios.post('/api/offers', {
+                    business_name: offerBusiness,
+                    offer_title: offerTitle,
+                    offer_description: offerDesc,
+                    coupon_code: offerCoupon
+                  });
+                  alert('Sponsor offer successfully listed!');
+                  setOfferBusiness('');
+                  setOfferTitle('');
+                  setOfferDesc('');
+                  setOfferCoupon('');
+                  // Refetch
+                  const res = await axios.get('/api/offers');
+                  setOffersList(res.data.offers || []);
+                } catch (err) {
+                  console.error(err);
+                  alert('Failed to save offer.');
+                }
+              }}
+              className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-4 max-w-2xl"
+            >
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Add New Offer</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Business Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={offerBusiness}
+                    onChange={(e) => setOfferBusiness(e.target.value)}
+                    placeholder="e.g. Ooty Chocolate Factory"
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Coupon Code (Optional)</label>
+                  <input
+                    type="text"
+                    value={offerCoupon}
+                    onChange={(e) => setOfferCoupon(e.target.value)}
+                    placeholder="e.g. OOTYCHOCO20"
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Offer Title</label>
+                <input
+                  type="text"
+                  required
+                  value={offerTitle}
+                  onChange={(e) => setOfferTitle(e.target.value)}
+                  placeholder="e.g. 20% Off on all dark chocolates"
+                  className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Offer Description</label>
+                <textarea
+                  rows={2}
+                  value={offerDesc}
+                  onChange={(e) => setOfferDesc(e.target.value)}
+                  placeholder="e.g. Show this coupon code at billing to get a 20% discount on purchase of dark chocolates above ₹1000."
+                  className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300 resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-xl text-xs transition-colors cursor-pointer border border-transparent shadow-sm"
+              >
+                Create Sponsor Offer
+              </button>
+            </form>
+
+            {/* Offers List */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Active Coupons ({offersList.length})</h4>
+              {offersList.length === 0 ? (
+                <p className="text-xs text-slate-400 font-medium py-2">No sponsor offers configured yet.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {offersList.map((o) => (
+                    <div key={o.id} className="border border-slate-100 rounded-2xl p-4 bg-white shadow-sm flex flex-col justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase tracking-wider text-brand-green bg-brand-green/5 border border-brand-green/10 px-2 py-0.5 rounded-full">
+                            {o.business_name}
+                          </span>
+                          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${o.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                            {o.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-black text-slate-900">{o.offer_title}</h4>
+                        {o.offer_description && <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">{o.offer_description}</p>}
+                        {o.coupon_code && <span className="inline-block text-[10px] font-mono font-bold bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-slate-600">CODE: {o.coupon_code}</span>}
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-50 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await axios.put(`/api/offers/${o.id}/toggle`, { is_active: !o.is_active });
+                              // Refetch
+                              const res = await axios.get('/api/offers');
+                              setOffersList(res.data.offers || []);
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-[10px] font-bold cursor-pointer border ${o.is_active ? 'border-rose-200 text-rose-700 bg-rose-50/50 hover:bg-rose-50' : 'border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50'}`}
+                        >
+                          {o.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!window.confirm('Delete this sponsor offer permanently?')) return;
+                            try {
+                              await axios.delete(`/api/offers/${o.id}`);
+                              // Refetch
+                              const res = await axios.get('/api/offers');
+                              setOffersList(res.data.offers || []);
+                            } catch (err) {
+                              console.error(err);
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-200 text-slate-500 hover:bg-slate-50 cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* PANEL: My Village Group Scope Config & Life Events Notices */}
+        {activeTab === 'group_config' && (user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
+          <div className="space-y-8 animate-fadeIn">
+            
+            {/* 1. Group Config Card */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 font-display">
+                  ⚙️ Configure My Target Village Group
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  Check which Hattys (villages) are under your administrative group. Your notifications will be target-routed here by default.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {hattys.map((h: any) => {
+                  const isChecked = adminManagedGroups.includes(h.id);
+                  return (
+                    <label key={h.id} className={`flex items-center gap-2.5 p-3 border rounded-2xl cursor-pointer transition-colors ${isChecked ? 'bg-brand-green/5 border-brand-green/20' : 'bg-slate-50/20 border-slate-200'}`}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setAdminManagedGroups([...adminManagedGroups, h.id]);
+                          } else {
+                            setAdminManagedGroups(adminManagedGroups.filter(id => id !== h.id));
+                          }
+                        }}
+                        className="rounded text-brand-green focus:ring-brand-green cursor-pointer h-4 w-4"
+                      />
+                      <span className="text-xs font-bold text-slate-700">{h.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const res = await axios.post('/api/auth/admin-groups', {
+                      adminId: user?.id,
+                      managedHattyIds: adminManagedGroups
+                    });
+                    confetti({ particleCount: 40, spread: 50 });
+                    alert('Your target village group scope has been saved!');
+                    if (res.data.user) {
+                      user.managed_hatty_ids = res.data.user.managed_hatty_ids;
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert('Failed to save village group configurations.');
+                  }
+                }}
+                className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer border border-transparent shadow-sm"
+              >
+                Save My Village Group
+              </button>
+            </div>
+
+            {/* 2. Publish Life Event Notice Form */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 font-display">
+                  📢 Publish Birthday or Obituary Announcement Notice
+                </h3>
+                <p className="text-xs text-slate-400 font-medium mt-1">
+                  Share celebratory birthdays or critical obituaries with outreach to all or specific checked villages.
+                </p>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!lifeEventPerson || !lifeEventDate) return alert('Person name and date of event are required.');
+                  
+                  try {
+                    await axios.post('/api/life-events', {
+                      type: lifeEventType,
+                      person_name: lifeEventPerson,
+                      date_of_event: lifeEventDate,
+                      description: lifeEventDesc,
+                      target_hatty_ids: lifeEventTargets.length === 0 ? null : lifeEventTargets,
+                      created_by: user.name
+                    });
+                    confetti({ particleCount: 80, spread: 70 });
+                    alert(`Life event ${lifeEventType} notice published successfully!`);
+                    
+                    // Reset
+                    setLifeEventPerson('');
+                    setLifeEventDate('');
+                    setLifeEventDesc('');
+                    setLifeEventTargets([]);
+                  } catch (err) {
+                    console.error(err);
+                    alert('Failed to publish life event notice.');
+                  }
+                }}
+                className="space-y-4 max-w-2xl"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Occasion Type</label>
+                    <select
+                      value={lifeEventType}
+                      onChange={(e) => setLifeEventType(e.target.value as any)}
+                      className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300 cursor-pointer"
+                    >
+                      <option value="birthday">🎂 Birthday Celebration Event</option>
+                      <option value="obituary">🕊️ Obituary / Death Notice</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Person Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={lifeEventPerson}
+                      onChange={(e) => setLifeEventPerson(e.target.value)}
+                      placeholder="e.g. Parvati Kempa Gowda"
+                      className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date of Event</label>
+                    <input
+                      type="date"
+                      required
+                      value={lifeEventDate}
+                      onChange={(e) => setLifeEventDate(e.target.value)}
+                      className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Description / Details</label>
+                  <textarea
+                    rows={3}
+                    value={lifeEventDesc}
+                    onChange={(e) => setLifeEventDesc(e.target.value)}
+                    placeholder={lifeEventType === 'birthday' ? 'Describe the birthday celebration details, milestones, etc.' : 'Provide details regarding funeral timings, location, and family coordinates.'}
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300 resize-none"
+                  />
+                </div>
+
+                {/* Target Villages Selection */}
+                <div className="space-y-2 pt-2">
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Villages (Outreach Scope)</span>
+                  <p className="text-[10px] text-slate-400 font-medium">Leave all unchecked for global community-wide outreach.</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {hattys.map((h: any) => {
+                      const isTargetChecked = lifeEventTargets.includes(h.id);
+                      return (
+                        <label key={h.id} className={`flex items-center gap-2 p-2 border rounded-xl cursor-pointer transition-colors ${isTargetChecked ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-50/20 border-slate-100'}`}>
+                          <input
+                            type="checkbox"
+                            checked={isTargetChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setLifeEventTargets([...lifeEventTargets, h.id]);
+                              } else {
+                                setLifeEventTargets(lifeEventTargets.filter(id => id !== h.id));
+                              }
+                            }}
+                            className="rounded text-brand-blue focus:ring-brand-blue cursor-pointer h-3.5 w-3.5"
+                          />
+                          <span className="text-[11px] font-bold text-slate-700">{h.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-xl text-xs transition-colors cursor-pointer border border-transparent shadow-sm"
+                >
+                  Publish Special Occasion Notice
+                </button>
+              </form>
+            </div>
+
           </div>
         )}
 

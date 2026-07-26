@@ -367,3 +367,22 @@ export async function addUserDirect(req: Request, res: Response) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export async function updateAdminGroups(req: Request, res: Response) {
+  const { adminId, managedHattyIds } = req.body;
+  if (!adminId) {
+    return res.status(400).json({ error: 'Admin ID is required.' });
+  }
+  try {
+    const result = await query(
+      'UPDATE users SET managed_hatty_ids = $1 WHERE id = $2 RETURNING *',
+      [managedHattyIds || null, adminId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ success: true, user: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}

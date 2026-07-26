@@ -120,7 +120,7 @@ export async function getAnnouncements(req: Request, res: Response) {
     const params: any[] = [];
 
     if (hatty_id) {
-      sql += ' WHERE a.type = \'community\' OR a.hatty_id = $1';
+      sql += ' WHERE a.type = \'community\' OR a.hatty_id = $1 OR a.target_hatty_ids IS NULL OR cardinality(a.target_hatty_ids) = 0 OR $1 = ANY(a.target_hatty_ids)';
       params.push(parseInt(hatty_id as string));
     }
 
@@ -133,15 +133,15 @@ export async function getAnnouncements(req: Request, res: Response) {
 }
 
 export async function createAnnouncement(req: Request, res: Response) {
-  const { title, content, type, hatty_id, created_by } = req.body;
+  const { title, content, type, hatty_id, created_by, target_hatty_ids } = req.body;
   if (!title || !content || !created_by) {
     return res.status(400).json({ error: 'Title, content, and author are required' });
   }
 
   try {
     const result = await query(
-      'INSERT INTO announcements (title, content, type, hatty_id, created_by) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [title, content, type || 'community', hatty_id || null, created_by]
+      'INSERT INTO announcements (title, content, type, hatty_id, created_by, target_hatty_ids) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [title, content, type || 'community', hatty_id || null, created_by, target_hatty_ids || null]
     );
     res.status(201).json({ announcement: result.rows[0] });
   } catch (err: any) {
@@ -159,7 +159,7 @@ export async function getEvents(req: Request, res: Response) {
     const params: any[] = [];
 
     if (hatty_id) {
-      sql += ' WHERE e.type = \'community\' OR e.hatty_id = $1';
+      sql += ' WHERE e.type = \'community\' OR e.hatty_id = $1 OR e.target_hatty_ids IS NULL OR cardinality(e.target_hatty_ids) = 0 OR $1 = ANY(e.target_hatty_ids)';
       params.push(parseInt(hatty_id as string));
     }
 
@@ -172,15 +172,15 @@ export async function getEvents(req: Request, res: Response) {
 }
 
 export async function createEvent(req: Request, res: Response) {
-  const { title, description, event_date, event_time, location, hatty_id, type, created_by } = req.body;
+  const { title, description, event_date, event_time, location, hatty_id, type, created_by, target_hatty_ids } = req.body;
   if (!title || !description || !event_date || !event_time || !location || !created_by) {
     return res.status(400).json({ error: 'Missing required event fields' });
   }
 
   try {
     const result = await query(
-      'INSERT INTO events (title, description, event_date, event_time, location, hatty_id, type, created_by) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [title, description, event_date, event_time, location, hatty_id || null, type || 'community', created_by]
+      'INSERT INTO events (title, description, event_date, event_time, location, hatty_id, type, created_by, target_hatty_ids) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+      [title, description, event_date, event_time, location, hatty_id || null, type || 'community', created_by, target_hatty_ids || null]
     );
     res.status(201).json({ event: result.rows[0] });
   } catch (err: any) {
@@ -371,4 +371,145 @@ export async function searchExternalJobs(req: Request, res: Response) {
       listings: mockJobs
     });
   }, 800); // Small artificial delay to feel like a real live search
+}
+
+// --- Sponsor Offers ---
+export async function getOffers(req: Request, res: Response) {
+  const { activeOnly } = req.query;
+  try {
+    let sql = 'SELECT * FROM sponsor_offers';
+    if (activeOnly === 'true') {
+      sql += ' WHERE is_active = TRUE';
+    }
+    sql += ' ORDER BY created_at DESC';
+    const result = await query(sql);
+    res.json({ offers: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function createOffer(req: Request, res: Response) {
+  const { business_name, offer_title, offer_description, coupon_code } = req.body;
+  if (!business_name || !offer_title) {
+    return res.status(400).json({ error: 'Business name and offer title are required.' });
+  }
+  try {
+    const result = await query(
+      'INSERT INTO sponsor_offers (business_name, offer_title, offer_description, coupon_code, is_active) VALUES ($1, $2, $3, $4, TRUE) RETURNING *',
+      [business_name, offer_title, offer_description || '', coupon_code || '']
+    );
+    res.status(201).json({ success: true, offer: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function toggleOffer(req: Request, res: Response) {
+  const { id } = req.params;
+  const { is_active } = req.body;
+  try {
+    const result = await query(
+      'UPDATE sponsor_offers SET is_active = $1 WHERE id = $2 RETURNING *',
+      [is_active, id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+    res.json({ success: true, offer: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function deleteOffer(req: Request, res: Response) {
+  const { id } = req.params;
+  try {
+    const result = await query('DELETE FROM sponsor_offers WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Offer not found' });
+    }
+    res.json({ success: true, message: 'Offer deleted successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// --- Talent Showcase ---
+export async function getTalents(req: Request, res: Response) {
+  const { search, category } = req.query;
+  try {
+    let sql = 'SELECT t.*, u.phone as user_phone, u.email as user_email FROM talents t LEFT JOIN users u ON t.user_id = u.id';
+    const params: any[] = [];
+    const wheres: string[] = [];
+
+    if (category) {
+      wheres.push(`t.category = $${wheres.length + 1}`);
+      params.push(category);
+    }
+    if (search) {
+      wheres.push(`(t.name ILIKE $${wheres.length + 1} OR t.description ILIKE $${wheres.length + 1} OR t.category ILIKE $${wheres.length + 1})`);
+      params.push(`%${search}%`);
+    }
+
+    if (wheres.length > 0) {
+      sql += ' WHERE ' + wheres.join(' AND ');
+    }
+    sql += ' ORDER BY t.created_at DESC';
+
+    const result = await query(sql, params);
+    res.json({ talents: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function createTalent(req: Request, res: Response) {
+  const { user_id, name, category, description, contact_info, portfolio_link } = req.body;
+  if (!name || !category || !description) {
+    return res.status(400).json({ error: 'Name, category, and description are required.' });
+  }
+  try {
+    const result = await query(
+      'INSERT INTO talents (user_id, name, category, description, contact_info, portfolio_link) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [user_id || null, name, category, description, contact_info || '', portfolio_link || '']
+    );
+    res.status(201).json({ success: true, talent: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// --- Life Events ---
+export async function getLifeEvents(req: Request, res: Response) {
+  const { hatty_id } = req.query;
+  try {
+    let sql = 'SELECT * FROM life_events';
+    const params: any[] = [];
+    if (hatty_id) {
+      sql += ' WHERE target_hatty_ids IS NULL OR cardinality(target_hatty_ids) = 0 OR $1 = ANY(target_hatty_ids)';
+      params.push(parseInt(hatty_id as string));
+    }
+    sql += ' ORDER BY date_of_event DESC, id DESC';
+    const result = await query(sql, params);
+    res.json({ lifeEvents: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function createLifeEvent(req: Request, res: Response) {
+  const { type, person_name, date_of_event, description, target_hatty_ids, created_by } = req.body;
+  if (!type || !person_name || !date_of_event || !created_by) {
+    return res.status(400).json({ error: 'Missing required life event fields' });
+  }
+  try {
+    const result = await query(
+      'INSERT INTO life_events (type, person_name, date_of_event, description, target_hatty_ids, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [type, person_name, date_of_event, description || '', target_hatty_ids || null, created_by]
+    );
+    res.status(201).json({ success: true, lifeEvent: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 }

@@ -46,6 +46,7 @@ async function startServer() {
     app.get('/api/auth/hattys', auth.getHattys);
     app.post('/api/auth/hattys', auth.createHatty);
     app.delete('/api/auth/hattys/:id', auth.deleteHatty);
+    app.post('/api/auth/admin-groups', auth.updateAdminGroups);
 
     // Contact Access Requests
     app.get('/api/contact-requests', auth.getContactRequests);
@@ -70,6 +71,20 @@ async function startServer() {
     // Vachana Library
     app.get('/api/vachanas', comm.getVachanas);
     app.post('/api/vachanas', comm.createVachana);
+
+    // Sponsor Offers
+    app.get('/api/offers', comm.getOffers);
+    app.post('/api/offers', comm.createOffer);
+    app.put('/api/offers/:id/toggle', comm.toggleOffer);
+    app.delete('/api/offers/:id', comm.deleteOffer);
+
+    // Talents Showcase
+    app.get('/api/talents', comm.getTalents);
+    app.post('/api/talents', comm.createTalent);
+
+    // Life Events (Birthdays & Obituaries)
+    app.get('/api/life-events', comm.getLifeEvents);
+    app.post('/api/life-events', comm.createLifeEvent);
 
     // Help Board & Jobs
     app.get('/api/help-board', comm.getHelpPosts);
