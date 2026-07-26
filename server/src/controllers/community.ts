@@ -513,3 +513,34 @@ export async function createLifeEvent(req: Request, res: Response) {
     res.status(500).json({ error: err.message });
   }
 }
+
+export async function getSongs(req: Request, res: Response) {
+  try {
+    const result = await query(`
+      SELECT s.*, u.name as publisher_name 
+      FROM songs s
+      LEFT JOIN users u ON s.created_by = u.id
+      ORDER BY s.created_at DESC
+    `);
+    res.json({ songs: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function createSong(req: Request, res: Response) {
+  const { title, artist, description, file_url, category, created_by } = req.body;
+  if (!title || !artist || !file_url) {
+    return res.status(400).json({ error: 'Title, artist, and Dropbox/Drive link are required.' });
+  }
+  try {
+    const result = await query(
+      `INSERT INTO songs (title, artist, description, file_url, category, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [title, artist, description || '', file_url, category || 'Bhajan', created_by || null]
+    );
+    res.status(201).json({ success: true, song: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}

@@ -137,6 +137,18 @@ export async function initDb() {
             UNIQUE(group_id, user_id)
           )
         `);
+        await pgPool.query(`
+          CREATE TABLE IF NOT EXISTS songs (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            artist VARCHAR(255) NOT NULL,
+            description TEXT,
+            file_url TEXT NOT NULL,
+            category VARCHAR(100) DEFAULT 'Bhajan',
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
       } catch (err) {
         console.error('PostgreSQL auto-migrations warning:', err);
       }
@@ -196,6 +208,18 @@ export async function initDb() {
               role TEXT DEFAULT 'member',
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
               UNIQUE(group_id, user_id)
+            )
+          `);
+          sqliteDb!.run(`
+            CREATE TABLE IF NOT EXISTS songs (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              title TEXT NOT NULL,
+              artist TEXT NOT NULL,
+              description TEXT,
+              file_url TEXT NOT NULL,
+              category TEXT DEFAULT 'Bhajan',
+              created_by INTEGER,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
           `, () => {
             resolve();

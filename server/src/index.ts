@@ -86,6 +86,10 @@ async function startServer() {
     app.get('/api/life-events', comm.getLifeEvents);
     app.post('/api/life-events', comm.createLifeEvent);
 
+    // Audio & Songs Library
+    app.get('/api/songs', comm.getSongs);
+    app.post('/api/songs', comm.createSong);
+
     // Help Board & Jobs
     app.get('/api/help-board', comm.getHelpPosts);
     app.post('/api/help-board', comm.createHelpPost);

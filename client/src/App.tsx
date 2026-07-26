@@ -14,6 +14,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import Groups from './pages/Groups';
 import TalentShowcase from './pages/TalentShowcase';
+import SongsLibrary from './pages/SongsLibrary';
 import SuperAdminLogin from './pages/SuperAdminLogin';
 import axios from 'axios';
 
@@ -86,6 +87,7 @@ export default function App() {
             {tab === 'help' && <HelpBoard user={user} language={language} />}
             {tab === 'groups' && <Groups user={user} language={language} />}
             {tab === 'talents' && <TalentShowcase user={user} language={language} />}
+            {tab === 'songs' && <SongsLibrary user={user} language={language} />}
             {tab === 'shg' && <WomensGroup user={user} language={language} />}
             {tab === 'issues' && <IssueReporting user={user} language={language} />}
             {tab === 'admin' && <AdminDashboard user={user} language={language} />}

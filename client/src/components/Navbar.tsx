@@ -33,6 +33,7 @@ export default function Navbar({
     { name: { en: 'Talents Showcase', kn: 'ಪ್ರತಿಭಾ ಪ್ರದರ್ಶನ', ta: 'திறமைகள்', bd: 'Talents' }, id: 'talents' },
     { name: { en: 'Women\'s SHG', kn: 'ಮಹಿಳಾ ಸಂಘ', ta: 'மகளிர் குழு', bd: 'Women\'s SHG' }, id: 'shg' },
     { name: { en: 'Issues', kn: 'ಸಮಸ್ಯೆಗಳು', ta: 'புகார்கள்', bd: 'Issues' }, id: 'issues' },
+    { name: { en: 'Songs & Bhajans', kn: 'ಹಾಡುಗಳು & ಭಜನೆಗಳು', ta: 'பாடல்கள் & பஜனைகள்', bd: 'songs' }, id: 'songs' },
   ];
 
   const languages = [
