@@ -238,6 +238,29 @@ export async function deleteHatty(req: Request, res: Response) {
   }
 }
 
+export async function updateHatty(req: Request, res: Response) {
+  const { id } = req.params;
+  const { name, region, description, location, role } = req.body;
+  if (role !== 'SuperAdmin') {
+    return res.status(403).json({ error: 'Access denied. Only SuperAdmin can modify hattys.' });
+  }
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+  try {
+    const result = await query(
+      'UPDATE hattys SET name = $1, region = $2, description = $3, location = $4 WHERE id = $5 RETURNING *',
+      [name, region || 'Ooty Region', description || '', location || '', id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Village not found' });
+    }
+    res.json({ success: true, hatty: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 // --- Privacy & Contact Request Handlers ---
 
 export async function getContactRequests(req: Request, res: Response) {

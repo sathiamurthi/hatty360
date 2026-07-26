@@ -23,6 +23,13 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
   const [newVillageDesc, setNewVillageDesc] = useState('');
   const [newVillageRegion, setNewVillageRegion] = useState('');
 
+  // Editing village states
+  const [editingVillageId, setEditingVillageId] = useState<number | null>(null);
+  const [editVillageName, setEditVillageName] = useState('');
+  const [editVillageLocation, setEditVillageLocation] = useState('');
+  const [editVillageRegion, setEditVillageRegion] = useState('');
+  const [editVillageDesc, setEditVillageDesc] = useState('');
+
   // Member role config states
   const [allMembers, setAllMembers] = useState<any[]>([]);
   const [selectedUserRoles, setSelectedUserRoles] = useState<{[key: number]: string}>({});
@@ -136,6 +143,30 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
       alert('Village deleted successfully!');
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to delete village');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateVillage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editVillageName) return alert('Village name is required');
+    setLoading(true);
+    try {
+      await axios.put(`/api/auth/hattys/${editingVillageId}`, {
+        name: editVillageName,
+        region: editVillageRegion,
+        description: editVillageDesc,
+        location: editVillageLocation,
+        role: 'SuperAdmin'
+      });
+      setEditingVillageId(null);
+      // Re-fetch
+      const res = await axios.get('/api/auth/hattys');
+      setHattys(res.data.hattys || []);
+      alert('Village updated successfully!');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to update village');
     } finally {
       setLoading(false);
     }
@@ -987,13 +1018,28 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
                         )}
                       </div>
                       {user?.role === 'SuperAdmin' && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteVillage(hatty.id)}
-                          className="p-1.5 text-xs text-red-500 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border border-slate-100 bg-slate-50 shrink-0 font-bold"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex flex-col gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingVillageId(hatty.id);
+                              setEditVillageName(hatty.name || '');
+                              setEditVillageLocation(hatty.location || '');
+                              setEditVillageRegion(hatty.region || '');
+                              setEditVillageDesc(hatty.description || '');
+                            }}
+                            className="px-2.5 py-1.5 text-[10px] text-blue-600 rounded-xl hover:bg-blue-50 transition-all cursor-pointer border border-blue-100 bg-white font-black text-center uppercase tracking-wider"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVillage(hatty.id)}
+                            className="px-2.5 py-1.5 text-[10px] text-red-500 rounded-xl hover:bg-red-50 transition-all cursor-pointer border border-red-100 bg-white font-black text-center uppercase tracking-wider"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -1548,6 +1594,90 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
         )}
 
       </div>
+      {/* EDIT VILLAGE MODAL OVERLAY */}
+      {editingVillageId !== null && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <form 
+            onSubmit={handleUpdateVillage} 
+            className="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 border border-slate-100 animate-scaleUp"
+          >
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-900 font-display">
+                ✏️ Edit Village / Hatty
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingVillageId(null)}
+                className="text-xs font-bold text-slate-400 hover:text-slate-600 border border-slate-100 rounded-lg px-2.5 py-1"
+              >
+                Close
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">Village Name</label>
+              <input
+                type="text"
+                required
+                value={editVillageName}
+                onChange={(e) => setEditVillageName(e.target.value)}
+                placeholder="e.g. Balacola"
+                className="block w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">Location / District</label>
+              <input
+                type="text"
+                value={editVillageLocation}
+                onChange={(e) => setEditVillageLocation(e.target.value)}
+                placeholder="e.g. Nilgiris, Tamil Nadu"
+                className="block w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">Region</label>
+              <input
+                type="text"
+                value={editVillageRegion}
+                onChange={(e) => setEditVillageRegion(e.target.value)}
+                placeholder="e.g. Ooty Region"
+                className="block w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-wider mb-1">Description</label>
+              <textarea
+                rows={3}
+                value={editVillageDesc}
+                onChange={(e) => setEditVillageDesc(e.target.value)}
+                placeholder="Describe the village history or details..."
+                className="block w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-50">
+              <button
+                type="button"
+                onClick={() => setEditingVillageId(null)}
+                className="px-4 py-2.5 border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2.5 bg-brand-green hover:bg-brand-green-dark text-white rounded-xl text-xs font-bold cursor-pointer"
+              >
+                {loading ? 'Updating...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

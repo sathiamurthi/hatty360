@@ -46,6 +46,7 @@ async function startServer() {
     app.get('/api/auth/hattys', auth.getHattys);
     app.post('/api/auth/hattys', auth.createHatty);
     app.delete('/api/auth/hattys/:id', auth.deleteHatty);
+    app.put('/api/auth/hattys/:id', auth.updateHatty);
     app.post('/api/auth/admin-groups', auth.updateAdminGroups);
 
     // Contact Access Requests
