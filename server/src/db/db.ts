@@ -80,6 +80,105 @@ export async function initDb() {
         });
       });
     }
+    
+    // Ensure all tables and columns are created/altered in both PG and SQLite
+    console.log('Database: Running auto-migrations...');
+    if (isPostgres && pgPool) {
+      try {
+        await pgPool.query("ALTER TABLE feedback ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'feedback'");
+        await pgPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS managed_hatty_ids INTEGER[]");
+        await pgPool.query("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_hatty_ids INTEGER[]");
+        await pgPool.query("ALTER TABLE events ADD COLUMN IF NOT EXISTS target_hatty_ids INTEGER[]");
+        
+        await pgPool.query(`
+          CREATE TABLE IF NOT EXISTS sponsor_offers (
+            id SERIAL PRIMARY KEY,
+            business_name VARCHAR(255) NOT NULL,
+            offer_title VARCHAR(255) NOT NULL,
+            offer_description TEXT,
+            coupon_code VARCHAR(100),
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await pgPool.query(`
+          CREATE TABLE IF NOT EXISTS talents (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            name VARCHAR(255) NOT NULL,
+            category VARCHAR(100) NOT NULL,
+            description TEXT NOT NULL,
+            contact_info VARCHAR(255),
+            portfolio_link VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await pgPool.query(`
+          CREATE TABLE IF NOT EXISTS life_events (
+            id SERIAL PRIMARY KEY,
+            type VARCHAR(50) NOT NULL,
+            person_name VARCHAR(255) NOT NULL,
+            date_of_event DATE NOT NULL,
+            description TEXT,
+            target_hatty_ids INTEGER[],
+            created_by VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+      } catch (err) {
+        console.error('PostgreSQL auto-migrations warning:', err);
+      }
+    } else if (sqliteDb) {
+      // Running on SQLite
+      await new Promise<void>((resolve) => {
+        sqliteDb!.serialize(() => {
+          // Alter tables
+          sqliteDb!.run("ALTER TABLE feedback ADD COLUMN type VARCHAR(50) DEFAULT 'feedback'", (err) => {});
+          sqliteDb!.run("ALTER TABLE users ADD COLUMN managed_hatty_ids TEXT", (err) => {});
+          sqliteDb!.run("ALTER TABLE announcements ADD COLUMN target_hatty_ids TEXT", (err) => {});
+          sqliteDb!.run("ALTER TABLE events ADD COLUMN target_hatty_ids TEXT", (err) => {});
+          
+          // Create tables
+          sqliteDb!.run(`
+            CREATE TABLE IF NOT EXISTS sponsor_offers (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              business_name TEXT NOT NULL,
+              offer_title TEXT NOT NULL,
+              offer_description TEXT,
+              coupon_code TEXT,
+              is_active INTEGER DEFAULT 1,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+          sqliteDb!.run(`
+            CREATE TABLE IF NOT EXISTS talents (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER,
+              name TEXT NOT NULL,
+              category TEXT NOT NULL,
+              description TEXT NOT NULL,
+              contact_info TEXT,
+              portfolio_link TEXT,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+          sqliteDb!.run(`
+            CREATE TABLE IF NOT EXISTS life_events (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              type TEXT NOT NULL,
+              person_name TEXT NOT NULL,
+              date_of_event DATE NOT NULL,
+              description TEXT,
+              target_hatty_ids TEXT,
+              created_by TEXT NOT NULL,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          `, () => {
+            resolve();
+          });
+        });
+      });
+    }
   }
 }
 
@@ -89,10 +188,13 @@ export async function query(sqlText: string, params: any[] = []): Promise<{ rows
     const res = await pgPool.query(sqlText, params);
     return { rows: res.rows };
   } else if (sqliteDb) {
-    // Translate postgres $1, $2 to sqlite ?
-    // Check parameters and replace e.g. $1 with ?
+    // Translate PG array filters to SQLite compatibility
     let sqliteSql = sqlText;
-    const matches = sqlText.match(/\$\d+/g);
+    sqliteSql = sqliteSql.replace(/cardinality\(([^)]+)\)\s*=\s*0/gi, "($1 IS NULL OR $1 = '' OR $1 = '[]')");
+    // Replace $1 = ANY(a.target_hatty_ids) with (a.target_hatty_ids LIKE '%' || $1 || '%')
+    sqliteSql = sqliteSql.replace(/(\$\d+)\s*=\s*ANY\(([^)]+)\)/gi, "( $2 LIKE '%' || $1 || '%' )");
+
+    const matches = sqliteSql.match(/\$\d+/g);
     if (matches) {
       // Sort in descending order to avoid replacing e.g. $10 before $1
       const sortedMatches = [...new Set(matches)].sort((a, b) => {
@@ -104,6 +206,9 @@ export async function query(sqlText: string, params: any[] = []): Promise<{ rows
         sqliteSql = sqliteSql.replace(new RegExp('\\' + match, 'g'), '?');
       }
     }
+
+    // Convert parameter arrays to string representations for SQLite storage
+    const sqliteParams = params.map(p => Array.isArray(p) ? JSON.stringify(p) : p);
     
     // SQLite uses ON CONFLICT DO NOTHING differently or syntax differences.
     // In our schema.sql we use standard SQLite syntax.
@@ -117,7 +222,7 @@ export async function query(sqlText: string, params: any[] = []): Promise<{ rows
       const isDelete = sqliteSql.trim().toUpperCase().startsWith('DELETE');
 
       if (isSelect) {
-        sqliteDb!.all(sqliteSql, params, (err, rows) => {
+        sqliteDb!.all(sqliteSql, sqliteParams, (err, rows) => {
           if (err) {
             console.error(`SQLite Error running select [${sqliteSql}]:`, err);
             reject(err);
@@ -134,7 +239,7 @@ export async function query(sqlText: string, params: any[] = []): Promise<{ rows
           sqlWithoutReturning = sqliteSql.replace(/RETURNING\s+\*|RETURNING\s+\w+/gi, '');
         }
 
-        sqliteDb!.run(sqlWithoutReturning, params, function (err) {
+        sqliteDb!.run(sqlWithoutReturning, sqliteParams, function (err) {
           if (err) {
             console.error(`SQLite Error running statement [${sqliteSql}]:`, err);
             reject(err);

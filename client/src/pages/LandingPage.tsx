@@ -18,6 +18,7 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   const [rsvps, setRsvps] = useState<{[key: number]: string}>({});
   const [offers, setOffers] = useState<any[]>([]);
   const [lifeEvents, setLifeEvents] = useState<any[]>([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
   
   // Feedback state
   const [rating, setRating] = useState(5);
@@ -130,6 +131,16 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   useEffect(() => {
     fetchData();
   }, [user]);
+
+  useEffect(() => {
+    if (ads.length > 1) {
+      const interval = setInterval(() => {
+        setCurrentAdIndex((prev) => (prev + 1) % ads.length);
+      }, 4000);
+      return () => clearInterval(interval);
+    }
+    return () => {};
+  }, [ads]);
 
   const fetchData = async () => {
     try {
@@ -472,17 +483,44 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
             {ads.length === 0 ? (
               <p className="text-sm text-slate-400 font-medium py-2">{t.noAds}</p>
             ) : (
-              <div className="space-y-4">
-                {ads.map((ad) => (
-                  <div key={ad.id} className="bg-yellow-50/50 border border-yellow-100 rounded-2xl p-4 space-y-2 relative overflow-hidden group">
-                    <span className="absolute top-2 right-2 text-[8px] font-black uppercase bg-yellow-200 text-yellow-800 rounded px-1 tracking-widest shadow-sm">
-                      Sponsored
-                    </span>
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">{ad.business_name}</h4>
-                    <h5 className="text-sm font-black text-brand-green font-display">{ad.title}</h5>
-                    <p className="text-xs text-slate-600 font-medium leading-normal">{ad.description}</p>
+              <div className="relative overflow-hidden min-h-[160px] flex flex-col justify-between">
+                {/* Active Ad Slide */}
+                {ads.map((ad, idx) => {
+                  const isActive = idx === currentAdIndex;
+                  return (
+                    <div
+                      key={ad.id}
+                      className={`bg-gradient-to-br from-amber-50/50 to-orange-50/20 border border-amber-100 rounded-3xl p-5 space-y-3 relative overflow-hidden transition-all duration-700 flex flex-col justify-between min-h-[150px] ${
+                        isActive ? 'opacity-100 translate-x-0 relative block z-10 scale-100' : 'opacity-0 absolute top-0 left-0 w-full -translate-x-full pointer-events-none scale-95'
+                      }`}
+                    >
+                      <span className="absolute top-3 right-3 text-[8px] font-black uppercase bg-amber-200 text-amber-800 rounded px-1.5 py-0.5 tracking-wider shadow-sm z-20">
+                        Sponsored
+                      </span>
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{ad.business_name}</span>
+                        <h4 className="text-sm font-black text-slate-900 font-display leading-tight">{ad.title}</h4>
+                        <p className="text-xs text-slate-600 font-medium leading-relaxed">{ad.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Dots indicator navigation */}
+                {ads.length > 1 && (
+                  <div className="flex justify-center gap-1.5 mt-4 z-20">
+                    {ads.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentAdIndex(idx)}
+                        className={`h-1.5 w-1.5 rounded-full transition-all cursor-pointer border-0 p-0 ${
+                          idx === currentAdIndex ? 'bg-amber-500 w-3' : 'bg-slate-200'
+                        }`}
+                      />
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
             {user?.role !== 'SuperAdmin' && (
