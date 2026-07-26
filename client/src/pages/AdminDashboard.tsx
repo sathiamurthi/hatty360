@@ -9,13 +9,23 @@ interface AdminDashboardProps {
 }
 
 export default function AdminDashboard({ user, language }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<'users' | 'ads' | 'feedback' | 'draft' | 'campaigns'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'ads' | 'feedback' | 'draft' | 'campaigns' | 'roles' | 'villages'>('users');
   
   // Data lists
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [pendingAds, setPendingAds] = useState<any[]>([]);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Village config states
+  const [newVillageName, setNewVillageName] = useState('');
+  const [newVillageLocation, setNewVillageLocation] = useState('');
+  const [newVillageDesc, setNewVillageDesc] = useState('');
+
+  // Member role config states
+  const [allMembers, setAllMembers] = useState<any[]>([]);
+  const [selectedUserRoles, setSelectedUserRoles] = useState<{[key: number]: string}>({});
+  const [customRoles, setCustomRoles] = useState<{[key: number]: string}>({});
 
   // Fundraising campaign form state
   const [campaignTitle, setCampaignTitle] = useState('');
@@ -60,6 +70,75 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
     }
   };
 
+  const handleCreateVillage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVillageName) return alert('Village name is required');
+    setLoading(true);
+    try {
+      await axios.post('/api/auth/hattys', {
+        name: newVillageName,
+        description: newVillageDesc,
+        location: newVillageLocation,
+        role: 'SuperAdmin'
+      });
+      confetti({ particleCount: 60, spread: 60 });
+      setNewVillageName('');
+      setNewVillageDesc('');
+      setNewVillageLocation('');
+      // Re-fetch
+      const res = await axios.get('/api/auth/hattys');
+      setHattys(res.data.hattys || []);
+      alert('Village successfully configured!');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to create village');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteVillage = async (villageId: number) => {
+    if (!confirm('Are you sure you want to delete this village/hatty?')) return;
+    setLoading(true);
+    try {
+      await axios.delete(`/api/auth/hattys/${villageId}`, { data: { role: 'SuperAdmin' } });
+      // Re-fetch
+      const res = await axios.get('/api/auth/hattys');
+      setHattys(res.data.hattys || []);
+      alert('Village deleted successfully!');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete village');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberId: number) => {
+    const roleToAssign = selectedUserRoles[memberId] === 'Custom' 
+      ? customRoles[memberId] 
+      : selectedUserRoles[memberId];
+
+    if (!roleToAssign) {
+      alert('Please select or specify a role.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.post('/api/auth/role', {
+        userId: memberId,
+        role: roleToAssign
+      });
+      confetti({ particleCount: 50, colors: ['#10b981'] });
+      alert('Member role updated successfully!');
+      // Re-fetch
+      const res = await axios.get('/api/members');
+      setAllMembers(res.data.members || []);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to update member role');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // AI draft assist state
   const [bulletPoints, setBulletPoints] = useState('');
@@ -92,6 +171,12 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
       } else if (activeTab === 'feedback') {
         const res = await axios.get('/api/feedback');
         setFeedbacks(res.data.feedback);
+      } else if (activeTab === 'roles') {
+        const res = await axios.get('/api/members');
+        setAllMembers(res.data.members || []);
+      } else if (activeTab === 'villages') {
+        const res = await axios.get('/api/auth/hattys');
+        setHattys(res.data.hattys || []);
       }
     } catch (err) {
       console.error(err);
@@ -209,15 +294,33 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
         {(user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
           <>
             {user?.role === 'SuperAdmin' && (
-              <button
-                onClick={() => setActiveTab('ads')}
-                className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
-                  activeTab === 'ads' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Megaphone className="h-4 w-4" />
-                Ad Approvals ({pendingAds.length})
-              </button>
+              <>
+                <button
+                  onClick={() => setActiveTab('ads')}
+                  className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'ads' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Megaphone className="h-4 w-4" />
+                  Ad Approvals ({pendingAds.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('roles')}
+                  className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'roles' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  👥 Member Roles
+                </button>
+                <button
+                  onClick={() => setActiveTab('villages')}
+                  className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+                    activeTab === 'villages' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  🏘️ Village Config
+                </button>
+              </>
             )}
             <button
               onClick={() => setActiveTab('feedback')}
@@ -658,6 +761,192 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
               )}
             </div>
 
+          </div>
+        )}
+
+        {/* PANEL: Village / Hatty Config (SuperAdmin only) */}
+        {activeTab === 'villages' && user?.role === 'SuperAdmin' && (
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 font-display">
+                🏘️ Village / Hatty Configuration
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Establish new regional chapters (Hattys) in the community.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Creation Form */}
+              <div className="lg:col-span-1 bg-slate-50/50 p-6 rounded-2xl border border-slate-100/80 space-y-4">
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+                  Configure New Village
+                </h4>
+                <form onSubmit={handleCreateVillage} className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Village Name</label>
+                    <input
+                      type="text"
+                      value={newVillageName}
+                      onChange={(e) => setNewVillageName(e.target.value)}
+                      placeholder="e.g. Balacola"
+                      className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Location / District</label>
+                    <input
+                      type="text"
+                      value={newVillageLocation}
+                      onChange={(e) => setNewVillageLocation(e.target.value)}
+                      placeholder="e.g. Nilgiris, Tamil Nadu"
+                      className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Description</label>
+                    <textarea
+                      rows={3}
+                      value={newVillageDesc}
+                      onChange={(e) => setNewVillageDesc(e.target.value)}
+                      placeholder="e.g. Ancient settlement near Ooty..."
+                      className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none resize-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-2.5 px-4 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    {loading ? 'Creating...' : 'Create Village'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Village List */}
+              <div className="lg:col-span-2 space-y-4">
+                <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+                  Established Villages ({hattys.length})
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {hattys.map((hatty: any) => (
+                    <div key={hatty.id} className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm flex justify-between items-start gap-4">
+                      <div>
+                        <h5 className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                          📍 {hatty.name}
+                        </h5>
+                        <p className="text-[10px] text-slate-400 font-semibold uppercase mt-0.5">
+                          {hatty.location || 'Nilgiris District'}
+                        </p>
+                        {hatty.description && (
+                          <p className="text-[10px] text-slate-500 font-medium mt-1 leading-relaxed line-clamp-2">
+                            {hatty.description}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVillage(hatty.id)}
+                        className="p-1.5 text-xs text-red-500 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border border-slate-100 bg-slate-50"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PANEL: Member Roles (SuperAdmin/Admin) */}
+        {activeTab === 'roles' && (user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-6">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 font-display">
+                👥 Member Role Management
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Assign and modify administrative roles, Thalaivar status, or custom roles for community members.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100 text-xs">
+                <thead>
+                  <tr className="text-slate-400 font-bold uppercase tracking-wider text-left">
+                    <th className="pb-3 font-semibold">Member</th>
+                    <th className="pb-3 font-semibold">Village / Hatty</th>
+                    <th className="pb-3 font-semibold">Current Role</th>
+                    <th className="pb-3 font-semibold">Assign Role</th>
+                    <th className="pb-3 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 text-slate-700">
+                  {allMembers.map((member: any) => {
+                    const currentSelectedRole = selectedUserRoles[member.id] || member.role || 'Member';
+                    const showCustomInput = currentSelectedRole === 'Custom';
+
+                    return (
+                      <tr key={member.id} className="hover:bg-slate-50/40">
+                        <td className="py-3.5 pr-4">
+                          <div className="font-bold text-slate-800">{member.name}</div>
+                          <div className="text-[10px] text-slate-400 font-medium">{member.phone}</div>
+                        </td>
+                        <td className="py-3.5 pr-4 font-semibold text-slate-600">
+                          {member.hatty_name || 'Global'}
+                        </td>
+                        <td className="py-3.5 pr-4">
+                          <span className="px-2 py-1 bg-brand-green/10 text-brand-green border border-brand-green/20 rounded-lg text-[9px] font-black uppercase tracking-wider font-sans">
+                            {member.role || 'Member'}
+                          </span>
+                        </td>
+                        <td className="py-3.5 pr-4 space-y-2">
+                          <select
+                            value={currentSelectedRole}
+                            onChange={(e) => {
+                              setSelectedUserRoles(prev => ({ ...prev, [member.id]: e.target.value }));
+                            }}
+                            className="px-2 py-1.5 border border-slate-200 rounded-lg text-slate-700 bg-white font-semibold focus:outline-none"
+                          >
+                            <option value="Member">Member</option>
+                            <option value="Thalaivar">Thalaivar</option>
+                            <option value="Secretary">Secretary</option>
+                            <option value="Finance Secretary">Finance Secretary</option>
+                            <option value="Admin">Admin</option>
+                            <option value="SuperAdmin">SuperAdmin</option>
+                            <option value="Custom">Custom Role...</option>
+                          </select>
+
+                          {showCustomInput && (
+                            <input
+                              type="text"
+                              value={customRoles[member.id] || ''}
+                              onChange={(e) => {
+                                setCustomRoles(prev => ({ ...prev, [member.id]: e.target.value }));
+                              }}
+                              placeholder="e.g. Welfare Officer"
+                              className="block w-full px-2 py-1.5 border border-slate-200 rounded-lg text-slate-800 text-[11px] font-medium focus:outline-none mt-1"
+                            />
+                          )}
+                        </td>
+                        <td className="py-3.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateMemberRole(member.id)}
+                            disabled={loading}
+                            className="px-3.5 py-1.5 bg-slate-900 text-white font-bold rounded-xl text-[10px] hover:bg-slate-850 transition-colors shadow-sm cursor-pointer"
+                          >
+                            Apply Role
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

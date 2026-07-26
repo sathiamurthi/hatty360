@@ -43,6 +43,8 @@ async function startServer() {
     app.post('/api/auth/role', auth.updateRole);
     app.get('/api/auth/pending', auth.getPendingUsers);
     app.get('/api/auth/hattys', auth.getHattys);
+    app.post('/api/auth/hattys', auth.createHatty);
+    app.delete('/api/auth/hattys/:id', auth.deleteHatty);
 
     // Contact Access Requests
     app.get('/api/contact-requests', auth.getContactRequests);

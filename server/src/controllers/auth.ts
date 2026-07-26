@@ -9,7 +9,7 @@ export async function login(req: Request, res: Response) {
   }
 
   // SuperAdmin override check
-  if (phone === 'superadmin@demandgeniusai.com') {
+  if (phone === 'superadmin@demandgeniusai.com' || phone === 'paariwalaconnect@gmail.com') {
     if (password !== 'Admin@123') {
       return res.status(401).json({ error: 'Incorrect credentials for SuperAdmin.' });
     }
@@ -18,7 +18,12 @@ export async function login(req: Request, res: Response) {
       if (result.rows.length === 0) {
         // Auto-seed if missing
         await query(
-          "INSERT INTO users (phone, name, email, role, status, selected_language) VALUES ('0000000000', 'Super Admin', 'superadmin@demandgeniusai.com', 'SuperAdmin', 'approved', 'en')"
+          "INSERT INTO users (phone, name, email, role, status, selected_language) VALUES ($1, $2, $3, 'SuperAdmin', 'approved', 'en')",
+          [
+            phone === 'paariwalaconnect@gmail.com' ? '0000000001' : '0000000000',
+            phone === 'paariwalaconnect@gmail.com' ? 'Paariwala SuperAdmin' : 'Super Admin',
+            phone
+          ]
         );
         result = await query('SELECT u.*, h.name as hatty_name FROM users u LEFT JOIN hattys h ON u.hatty_id = h.id WHERE u.email = $1', [phone]);
       }
@@ -181,6 +186,39 @@ export async function getHattys(req: Request, res: Response) {
   try {
     const result = await query('SELECT * FROM hattys ORDER BY name ASC');
     res.json({ hattys: result.rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function createHatty(req: Request, res: Response) {
+  const { name, description, location, role } = req.body;
+  if (role !== 'SuperAdmin') {
+    return res.status(403).json({ error: 'Access denied. Only SuperAdmin can configure hattys.' });
+  }
+  if (!name) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+  try {
+    const result = await query(
+      'INSERT INTO hattys (name, description, location) VALUES ($1, $2, $3) RETURNING *',
+      [name, description || '', location || '']
+    );
+    res.status(201).json({ success: true, hatty: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function deleteHatty(req: Request, res: Response) {
+  const { id } = req.params;
+  const { role } = req.body;
+  if (role !== 'SuperAdmin') {
+    return res.status(403).json({ error: 'Access denied. Only SuperAdmin can delete hattys.' });
+  }
+  try {
+    await query('DELETE FROM hattys WHERE id = $1', [id]);
+    res.json({ success: true, message: 'Hatty deleted successfully' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
