@@ -148,20 +148,6 @@ export default function Onboarding({ onAuthSuccess, language, setLanguage }: Onb
     }
   };
 
-  const loadSuperAdminAccount = async (emailStr: string) => {
-    setLoading(true);
-    try {
-      const res = await axios.post('/api/auth/login', { phone: emailStr, password: 'Admin@123' });
-      if (res.data.status === 'approved') {
-        onAuthSuccess(res.data.user);
-      }
-    } catch (err) {
-      console.error(err);
-      setError('SuperAdmin instant login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
@@ -194,79 +180,43 @@ export default function Onboarding({ onAuthSuccess, language, setLanguage }: Onb
 
         {/* STEP 1: Login & Register (Single Flow) */}
         {step === 'login' && (
-          <>
-            {/* SuperAdmin Instant Login Banner */}
-            <div className="bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-2xl p-4 shadow-md text-center space-y-2 mb-4 relative overflow-hidden">
-              <div className="relative z-10 flex flex-col items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-yellow-100 flex items-center gap-1">⚡ SuperAdmin Instant Access</span>
-                <button
-                  type="button"
-                  onClick={() => loadSuperAdminAccount('paariwalaconnect@gmail.com')}
-                  disabled={loading}
-                  className="mt-2 bg-white text-slate-900 font-extrabold text-xs px-5 py-2.5 rounded-xl hover:bg-slate-50 transition-all shadow cursor-pointer border border-transparent hover:scale-[1.02]"
-                >
-                  Login directly as paariwalaconnect@gmail.com
-                </button>
+          <form className="mt-8 space-y-6" onSubmit={handleLoginRegister}>
+            <div className="space-y-4 rounded-md">
+              <div>
+                <label htmlFor="phone-number" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Phone Number
+                </label>
+                <div className="relative rounded-xl shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Smartphone className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    id="phone-number"
+                    type="text"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Enter name if registering */}
+              <div>
+                <label htmlFor="full-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Full Name <span className="text-slate-400 font-normal">(Required for New Registrations)</span>
+                </label>
+                <input
+                  id="full-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter full name"
+                  className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
+                />
               </div>
             </div>
-
-            <form className="mt-8 space-y-6" onSubmit={handleLoginRegister}>
-              <div className="space-y-4 rounded-md">
-                <div>
-                  <label htmlFor="phone-number" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    Phone Number / Email
-                  </label>
-                  <div className="relative rounded-xl shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Smartphone className="h-4 w-4 text-slate-400" />
-                    </div>
-                    <input
-                      id="phone-number"
-                      type="text"
-                      required
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Enter phone or admin email"
-                      className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
-                    />
-                  </div>
-                </div>
-
-                {/* Password field for SuperAdmin */}
-                {(phone === 'superadmin@demandgeniusai.com' || phone === 'paariwalaconnect@gmail.com') && (
-                  <div>
-                    <label htmlFor="admin-password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                      SuperAdmin Password
-                    </label>
-                    <input
-                      id="admin-password"
-                      type="password"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter Admin Password"
-                      className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
-                    />
-                  </div>
-                )}
-
-                {/* Enter name if registering */}
-                {phone !== 'superadmin@demandgeniusai.com' && phone !== 'paariwalaconnect@gmail.com' && (
-                  <div>
-                    <label htmlFor="full-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                      Full Name <span className="text-slate-400 font-normal">(Required for New Registrations)</span>
-                    </label>
-                    <input
-                      id="full-name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter full name"
-                      className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
-                    />
-                  </div>
-                )}
-              </div>
 
             <div>
               <button
@@ -320,7 +270,6 @@ export default function Onboarding({ onAuthSuccess, language, setLanguage }: Onb
               </div>
             </div>
           </form>
-          </>
         )}
 
         {/* STEP 2: Profile setup */}

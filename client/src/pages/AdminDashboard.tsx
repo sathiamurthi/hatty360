@@ -27,6 +27,14 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
   const [selectedUserRoles, setSelectedUserRoles] = useState<{[key: number]: string}>({});
   const [customRoles, setCustomRoles] = useState<{[key: number]: string}>({});
 
+  // Direct registration states
+  const [directName, setDirectName] = useState('');
+  const [directPhone, setDirectPhone] = useState('');
+  const [directEmail, setDirectEmail] = useState('');
+  const [directHattyId, setDirectHattyId] = useState('');
+  const [directRole, setDirectRole] = useState('Member');
+  const [directCustomRole, setDirectCustomRole] = useState('');
+
   // Fundraising campaign form state
   const [campaignTitle, setCampaignTitle] = useState('');
   const [campaignDesc, setCampaignDesc] = useState('');
@@ -135,6 +143,50 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
       setAllMembers(res.data.members || []);
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to update member role');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddUserDirect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!directName || !directPhone) {
+      alert('Name and Phone are required.');
+      return;
+    }
+    
+    const roleToAssign = directRole === 'Custom' ? directCustomRole : directRole;
+    if (!roleToAssign) {
+      alert('Please specify a role.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await axios.post('/api/auth/add-user', {
+        name: directName,
+        phone: directPhone,
+        email: directEmail,
+        role: roleToAssign,
+        hattyId: directHattyId || null,
+        creatorRole: user.role
+      });
+      confetti({ particleCount: 80, spread: 60 });
+      alert('Administrative user successfully registered & approved!');
+      
+      // Reset
+      setDirectName('');
+      setDirectPhone('');
+      setDirectEmail('');
+      setDirectHattyId('');
+      setDirectRole('Member');
+      setDirectCustomRole('');
+
+      // Re-fetch
+      const res = await axios.get('/api/members');
+      setAllMembers(res.data.members || []);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to add user.');
     } finally {
       setLoading(false);
     }
@@ -870,6 +922,112 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
               <p className="text-xs text-slate-500 font-medium mt-1">
                 Assign and modify administrative roles, Thalaivar status, or custom roles for community members.
               </p>
+            </div>
+
+            {/* Direct Register/Add User Form */}
+            <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 space-y-4">
+              <h4 className="text-sm font-black text-slate-800 uppercase tracking-wide border-b border-slate-100 pb-2">
+                ➕ Add Administrative User (Admin, Thalaivar, Secretary, Custom)
+              </h4>
+              <form onSubmit={handleAddUserDirect} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={directName}
+                    onChange={(e) => setDirectName(e.target.value)}
+                    placeholder="e.g. Ramesh Gowder"
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    required
+                    value={directPhone}
+                    onChange={(e) => setDirectPhone(e.target.value)}
+                    placeholder="e.g. 9876543210"
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email (Optional)</label>
+                  <input
+                    type="email"
+                    value={directEmail}
+                    onChange={(e) => setDirectEmail(e.target.value)}
+                    placeholder="e.g. ramesh@example.com"
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Village / Hatty</label>
+                  <select
+                    value={directHattyId}
+                    onChange={(e) => setDirectHattyId(e.target.value)}
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  >
+                    <option value="">Global / Community-wide</option>
+                    {hattys.map((h: any) => (
+                      <option key={h.id} value={h.id}>{h.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Assigned Role</label>
+                  <select
+                    value={directRole}
+                    onChange={(e) => setDirectRole(e.target.value)}
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  >
+                    <option value="Member">Member</option>
+                    <option value="Thalaivar">Thalaivar</option>
+                    <option value="Secretary">Secretary</option>
+                    <option value="Finance Secretary">Finance Secretary</option>
+                    <option value="Admin">Admin</option>
+                    <option value="SuperAdmin">SuperAdmin</option>
+                    <option value="Custom">Custom Role...</option>
+                  </select>
+                </div>
+                <div>
+                  {directRole === 'Custom' ? (
+                    <>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Custom Role Title</label>
+                      <input
+                        type="text"
+                        required
+                        value={directCustomRole}
+                        onChange={(e) => setDirectCustomRole(e.target.value)}
+                        placeholder="e.g. Welfare Officer"
+                        className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                      />
+                    </>
+                  ) : (
+                    <div className="h-full flex items-end">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer border border-transparent shadow-sm"
+                      >
+                        {loading ? 'Adding...' : 'Add Approved User'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {directRole === 'Custom' && (
+                  <div className="md:col-span-3 flex justify-end mt-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer border border-transparent shadow-sm"
+                    >
+                      {loading ? 'Adding...' : 'Add Approved User'}
+                    </button>
+                  </div>
+                )}
+              </form>
             </div>
 
             <div className="overflow-x-auto">

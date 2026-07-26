@@ -41,6 +41,7 @@ async function startServer() {
     app.post('/api/auth/profile', auth.updateProfile);
     app.post('/api/auth/approve', auth.approveUser);
     app.post('/api/auth/role', auth.updateRole);
+    app.post('/api/auth/add-user', auth.addUserDirect);
     app.get('/api/auth/pending', auth.getPendingUsers);
     app.get('/api/auth/hattys', auth.getHattys);
     app.post('/api/auth/hattys', auth.createHatty);

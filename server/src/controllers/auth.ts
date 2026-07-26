@@ -343,3 +343,27 @@ export async function getUserContactStatus(req: Request, res: Response) {
     res.status(500).json({ error: err.message });
   }
 }
+
+// Add user directly with approved status (for SuperAdmin / Admin use)
+export async function addUserDirect(req: Request, res: Response) {
+  const { name, phone, email, role, hattyId, creatorRole } = req.body;
+  if (creatorRole !== 'Admin' && creatorRole !== 'SuperAdmin') {
+    return res.status(403).json({ error: 'Access denied. Only Admin or SuperAdmin can add administrative users.' });
+  }
+  if (!name || !phone) {
+    return res.status(400).json({ error: 'Name and Phone are required' });
+  }
+  try {
+    const existing = await query('SELECT id FROM users WHERE phone = $1', [phone]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'A user with this phone number is already registered.' });
+    }
+    const result = await query(
+      'INSERT INTO users (name, phone, email, role, hatty_id, status, selected_language) VALUES ($1, $2, $3, $4, $5, \'approved\', \'en\') RETURNING *',
+      [name, phone, email || '', role || 'Member', hattyId ? parseInt(hattyId) : null]
+    );
+    res.status(201).json({ success: true, user: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}

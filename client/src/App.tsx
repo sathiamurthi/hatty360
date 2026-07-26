@@ -13,11 +13,12 @@ import IssueReporting from './pages/IssueReporting';
 import AdminDashboard from './pages/AdminDashboard';
 import Profile from './pages/Profile';
 import Groups from './pages/Groups';
+import SuperAdminLogin from './pages/SuperAdminLogin';
 import axios from 'axios';
 
 export default function App() {
   const [user, setUser] = useState<any>(null);
-  const [tab, setTab] = useState('home');
+  const [tab, setTab] = useState(window.location.pathname === '/superadmin' ? 'admin' : 'home');
   const [language, setLanguage] = useState('en');
   const [showAuthModal, setShowAuthModal] = useState(false);
 
@@ -90,17 +91,27 @@ export default function App() {
           </div>
         </div>
       ) : (
-        /* Onboarding Gate (Name + phone -> Hatty registration) */
-        <div className="flex-grow flex items-center justify-center py-10">
-          <Onboarding
-            onAuthSuccess={(userData) => {
-              setUser(userData);
-              setLanguage(userData.selected_language || 'en');
-              setShowAuthModal(false);
-            }}
-            language={language}
-            setLanguage={setLanguage}
-          />
+        /* Onboarding Gate or SuperAdmin login */
+        <div className="flex-grow flex items-center justify-center py-10 w-full animate-fadeIn">
+          {window.location.pathname === '/superadmin' ? (
+            <SuperAdminLogin
+              onAuthSuccess={(userData) => {
+                setUser(userData);
+                setLanguage(userData.selected_language || 'en');
+                setTab('admin');
+              }}
+            />
+          ) : (
+            <Onboarding
+              onAuthSuccess={(userData) => {
+                setUser(userData);
+                setLanguage(userData.selected_language || 'en');
+                setShowAuthModal(false);
+              }}
+              language={language}
+              setLanguage={setLanguage}
+            />
+          )}
         </div>
       )}
 
