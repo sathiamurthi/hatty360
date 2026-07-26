@@ -80,7 +80,7 @@ export default function App() {
           <div className="animate-fadeIn">
             {tab === 'home' && <LandingPage user={user} language={language} setTab={setTab} />}
             {tab === 'directory' && <Directory user={user} language={language} />}
-            {tab === 'vachana' && <VachanaLibrary language={language} />}
+            {tab === 'vachana' && <VachanaLibrary user={user} language={language} />}
             {tab === 'fundraising' && <Fundraising user={user} language={language} />}
             {tab === 'help' && <HelpBoard user={user} language={language} />}
             {tab === 'groups' && <Groups user={user} language={language} />}

@@ -3,14 +3,56 @@ import { BookOpen, Search, Filter, Quote } from 'lucide-react';
 import axios from 'axios';
 
 interface VachanaLibraryProps {
+  user: any;
   language: string;
 }
 
-export default function VachanaLibrary({ language }: VachanaLibraryProps) {
+export default function VachanaLibrary({ user, language }: VachanaLibraryProps) {
   const [vachanas, setVachanas] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [selectedAuthor, setSelectedAuthor] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Form states for adding Vachana
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newAuthor, setNewAuthor] = useState('');
+  const [newKannada, setNewKannada] = useState('');
+  const [newTransliteration, setNewTransliteration] = useState('');
+  const [newEnglish, setNewEnglish] = useState('');
+  const [newExplanation, setNewExplanation] = useState('');
+  const [addError, setAddError] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const handleAddVachana = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAuthor || !newKannada || !newEnglish) {
+      setAddError('Author, Kannada Original, and English Translation/Story are required.');
+      return;
+    }
+
+    setAdding(true);
+    setAddError('');
+    try {
+      await axios.post('/api/vachanas', {
+        author: newAuthor,
+        text_kannada: newKannada,
+        text_english: newEnglish,
+        transliteration: newTransliteration,
+        explanation: newExplanation
+      });
+      setNewAuthor('');
+      setNewKannada('');
+      setNewTransliteration('');
+      setNewEnglish('');
+      setNewExplanation('');
+      setShowAddModal(false);
+      fetchVachanas();
+    } catch (err: any) {
+      setAddError(err.response?.data?.error || 'Failed to add Vachana/Story');
+    } finally {
+      setAdding(false);
+    }
+  };
 
   useEffect(() => {
     fetchVachanas();
@@ -106,9 +148,20 @@ export default function VachanaLibrary({ language }: VachanaLibraryProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
       {/* Title */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight font-display">{t.title}</h2>
-        <p className="text-sm text-slate-500 font-medium mt-1">{t.sub}</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight font-display">{t.title}</h2>
+          <p className="text-sm text-slate-500 font-medium mt-1">{t.sub}</p>
+        </div>
+        {(user?.role === 'Admin' || user?.role === 'SuperAdmin' || user?.role === 'Thalaivar' || user?.role === 'Secretary') && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="inline-flex items-center gap-1.5 px-5 py-3 text-xs font-bold text-white bg-slate-950 hover:bg-slate-800 rounded-xl tracking-wide uppercase transition-all shadow cursor-pointer border border-transparent self-start md:self-auto"
+          >
+            <BookOpen className="h-4 w-4" />
+            Add Vachana / Story
+          </button>
+        )}
       </div>
 
       {/* Filter Tabs */}
@@ -213,6 +266,118 @@ export default function VachanaLibrary({ language }: VachanaLibraryProps) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* ADD VACHANA / STORY MODAL */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 space-y-4 border border-slate-100 animate-scaleUp">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-extrabold text-lg text-slate-950 font-display">
+                ➕ Add Vachana or Motivation Story
+              </h3>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold text-lg cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {addError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl p-3">
+                {addError}
+              </div>
+            )}
+
+            <form onSubmit={handleAddVachana} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    Sharana / Author / Writer Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newAuthor}
+                    onChange={(e) => setNewAuthor(e.target.value)}
+                    placeholder="e.g. Basavanna"
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    Transliteration (Latin Alphabet)
+                  </label>
+                  <input
+                    type="text"
+                    value={newTransliteration}
+                    onChange={(e) => setNewTransliteration(e.target.value)}
+                    placeholder="e.g. Ullavaru shivalayava maduvaru..."
+                    className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Kannada Original / Story Verse
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newKannada}
+                  onChange={(e) => setNewKannada(e.target.value)}
+                  placeholder="e.g. ಉಳ್ಳವರು ಶಿವಾಲಯವ ಮಾಡುವರು..."
+                  className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  English Translation / Story Text
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newEnglish}
+                  onChange={(e) => setNewEnglish(e.target.value)}
+                  placeholder="e.g. The rich will make temples for Shiva. What shall I, a poor man, do?..."
+                  className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Philosophical Meaning / Motivation Message
+                </label>
+                <textarea
+                  rows={3}
+                  value={newExplanation}
+                  onChange={(e) => setNewExplanation(e.target.value)}
+                  placeholder="e.g. This vachana emphasizes that the physical body itself is a temple..."
+                  className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none focus:border-slate-300 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={adding}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer border border-transparent"
+                >
+                  {adding ? 'Publishing...' : 'Publish Vachana / Story'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

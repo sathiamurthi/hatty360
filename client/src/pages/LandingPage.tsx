@@ -19,6 +19,7 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   const [rating, setRating] = useState(5);
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<'feedback' | 'idea'>('feedback');
   const [loading, setLoading] = useState(false);
 
   // Ad request modal state
@@ -177,9 +178,10 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
     try {
       await axios.post('/api/feedback', {
         user_id: user?.id,
-        rating,
+        rating: feedbackType === 'idea' ? null : rating,
         comment: feedbackComment,
-        context_action: 'home_rating'
+        context_action: 'home_rating',
+        type: feedbackType
       });
       setFeedbackSubmitted(true);
       setFeedbackComment('');
@@ -386,44 +388,82 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
             )}
           </div>
 
-          {/* Feedback Form Widget */}
+          {/* Feedback & Idea Form Widget */}
           <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-6 border border-white/5 shadow-xl space-y-4 relative overflow-hidden">
             <div className="absolute -right-16 -bottom-16 h-36 w-36 rounded-full bg-white/5"></div>
             
             <h3 className="text-base font-extrabold tracking-tight font-display flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-              How was your experience?
+              {feedbackType === 'idea' ? (
+                <>
+                  <span className="text-blue-400 font-bold">💡</span>
+                  <span>Share a Community Idea</span>
+                </>
+              ) : (
+                <>
+                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                  <span>How was your experience?</span>
+                </>
+              )}
             </h3>
+
+            {/* Type Toggle Tab Row */}
+            <div className="flex bg-slate-800 p-1 rounded-xl gap-1 text-[10px] uppercase tracking-wide relative z-10">
+              <button
+                type="button"
+                onClick={() => setFeedbackType('feedback')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
+                  feedbackType === 'feedback' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                ⭐ Feedback
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedbackType('idea')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
+                  feedbackType === 'idea' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                💡 Share Idea
+              </button>
+            </div>
 
             {feedbackSubmitted ? (
               <div className="bg-brand-green/10 border border-brand-green-light/20 text-brand-green-light rounded-2xl p-4 text-xs font-semibold text-center animate-pulse">
-                {t.feedbackSuccess}
+                {feedbackType === 'idea' ? 'Thank you for sharing your idea!' : t.feedbackSuccess}
               </div>
             ) : (
               <form onSubmit={submitFeedback} className="space-y-3 relative z-10">
-                <p className="text-xs text-slate-300 font-medium leading-relaxed">
-                  {t.feedbackPrompt}
+                {feedbackType === 'feedback' && (
+                  <>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      Rate the App/Platform:
+                    </p>
+                    {/* Stars selector */}
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className="transition-transform hover:scale-110"
+                        >
+                          <Star className={`h-6 w-6 cursor-pointer ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-600'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  {feedbackType === 'idea' ? 'Description of your idea:' : 'Comments:'}
                 </p>
-                
-                {/* Stars selector */}
-                <div className="flex gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      className="transition-transform hover:scale-110"
-                    >
-                      <Star className={`h-6 w-6 cursor-pointer ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-600'}`} />
-                    </button>
-                  ))}
-                </div>
 
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={feedbackComment}
                   onChange={(e) => setFeedbackComment(e.target.value)}
-                  placeholder="Share your thoughts..."
+                  placeholder={feedbackType === 'idea' ? 'Tell us how we can connect, share, or grow together...' : 'Share your thoughts...'}
                   required
                   className="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-green-light"
                 ></textarea>
@@ -431,10 +471,10 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-2 px-4 rounded-xl w-full text-xs transition-all flex items-center justify-center gap-1 cursor-pointer"
+                  className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-2.5 px-4 rounded-xl w-full text-xs transition-all flex items-center justify-center gap-1 cursor-pointer border border-transparent shadow-md"
                 >
                   <Send className="h-3.5 w-3.5" />
-                  {t.feedbackSubmit}
+                  {feedbackType === 'idea' ? 'Submit Idea' : t.feedbackSubmit}
                 </button>
               </form>
             )}

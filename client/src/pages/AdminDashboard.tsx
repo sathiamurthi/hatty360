@@ -34,6 +34,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
   const [directHattyId, setDirectHattyId] = useState('');
   const [directRole, setDirectRole] = useState('Member');
   const [directCustomRole, setDirectCustomRole] = useState('');
+  const [approvalHattyFilter, setApprovalHattyFilter] = useState(() => (user?.role === 'Admin' || user?.role === 'SuperAdmin') ? 'all' : String(user?.hatty_id || 'all'));
 
   // Fundraising campaign form state
   const [campaignTitle, setCampaignTitle] = useState('');
@@ -207,15 +208,13 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
 
   useEffect(() => {
     fetchDashboardData();
-  }, [activeTab]);
+  }, [activeTab, approvalHattyFilter]);
 
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const hattyFilter = user?.role === 'Admin' ? '' : user?.hatty_id;
-      
       if (activeTab === 'users') {
-        const res = await axios.get('/api/auth/pending', { params: { hattyId: hattyFilter } });
+        const res = await axios.get('/api/auth/pending', { params: { hattyId: approvalHattyFilter } });
         setPendingUsers(res.data.pendingUsers);
       } else if (activeTab === 'ads') {
         const res = await axios.get('/api/ads/pending', { params: { role: user?.role } });
@@ -500,9 +499,25 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
         {/* PANEL 1: Member Approvals */}
         {activeTab === 'users' && (
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-            <h3 className="text-lg font-black text-slate-900 font-display border-b border-slate-50 pb-3">
-              Pending Member Registrations ({pendingUsers.length})
-            </h3>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-50 pb-3 gap-4">
+              <h3 className="text-lg font-black text-slate-900 font-display">
+                Pending Member Registrations ({pendingUsers.length})
+              </h3>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter Village:</span>
+                <select
+                  value={approvalHattyFilter}
+                  onChange={(e) => setApprovalHattyFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs font-semibold focus:outline-none focus:border-slate-300 cursor-pointer"
+                >
+                  <option value="all">All Villages / Hattys</option>
+                  {hattys.map((h: any) => (
+                    <option key={h.id} value={h.id}>{h.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             {loading ? (
               <div className="flex justify-center py-6">
@@ -617,10 +632,10 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
         )}
 
         {/* PANEL 3: Feedback Hub */}
-        {activeTab === 'feedback' && user?.role === 'Admin' && (
+        {activeTab === 'feedback' && (user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <h3 className="text-lg font-black text-slate-900 font-display border-b border-slate-50 pb-3">
-              Consolidated Member Feedbacks ({feedbacks.length})
+              Consolidated Member Feedbacks & Ideas ({feedbacks.length})
             </h3>
 
             {loading ? (
@@ -628,29 +643,51 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
                 <span className="h-6 w-6 rounded-full border-2 border-slate-200 border-t-brand-green animate-spin"></span>
               </div>
             ) : feedbacks.length === 0 ? (
-              <p className="text-xs text-slate-400 font-medium py-4 text-center">No feedback entries recorded.</p>
+              <p className="text-xs text-slate-400 font-medium py-4 text-center">No feedback or idea entries recorded.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {feedbacks.map((f) => (
-                  <div key={f.id} className="border border-slate-100 rounded-2xl p-4 flex items-start gap-4 hover:border-slate-200 transition-colors bg-slate-50/20">
-                    <div className="h-9 w-9 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                      {f.user_name ? f.user_name.charAt(0) : '?'}
+                  <div key={f.id} className="border border-slate-100 rounded-2xl p-5 flex items-start gap-4 hover:border-slate-200 transition-colors bg-slate-50/20">
+                    <div className="h-10 w-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                      {f.type === 'idea' ? '💡' : '⭐'}
                     </div>
-                    <div className="space-y-1.5 flex-grow">
+                    <div className="space-y-2 flex-grow">
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <h4 className="font-extrabold text-xs text-slate-900 leading-none">
-                          {f.user_name || 'Anonymous Member'} <span className="text-[9px] text-slate-400 font-bold">({f.hatty_name || 'N/A'})</span>
-                        </h4>
-                        
-                        {/* Rating stars display */}
-                        <div className="flex gap-0.5">
-                          {[1,2,3,4,5].map((star) => (
-                            <Star key={star} className={`h-3 w-3 ${star <= f.rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-200'}`} />
-                          ))}
+                        <div>
+                          <h4 className="font-extrabold text-xs text-slate-900 leading-none">
+                            {f.user_name || 'Anonymous Member'}
+                          </h4>
+                          <div className="text-[10px] text-slate-400 font-bold mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>📱 {f.user_phone || 'No Phone'}</span>
+                            {f.user_email && <span>📧 {f.user_email}</span>}
+                            <span className="bg-slate-100 px-2 py-0.5 rounded text-[8px] uppercase tracking-wide">🏘️ {f.hatty_name || 'Global'}</span>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-1 rounded-full ${f.type === 'idea' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                            {f.type === 'idea' ? 'Idea' : 'Feedback'}
+                          </span>
+                          <span className="text-[8px] text-slate-400 block mt-1 font-semibold uppercase tracking-wider">
+                            {new Date(f.created_at).toLocaleString()}
+                          </span>
                         </div>
                       </div>
-                      <p className="text-xs text-slate-600 font-medium leading-normal">{f.comment}</p>
-                      <span className="text-[8px] text-slate-400 block font-semibold uppercase tracking-wider">Trigger: {f.context_action}</span>
+                      
+                      <div className="bg-white/60 p-3 rounded-xl border border-slate-100/60 mt-1">
+                        <p className="text-xs text-slate-600 font-medium leading-normal whitespace-pre-wrap">{f.comment}</p>
+                      </div>
+
+                      {f.type === 'feedback' && f.rating && (
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Rating:</span>
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star key={star} className={`h-3 w-3 ${star <= f.rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-200'}`} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -170,7 +170,7 @@ export async function getPendingUsers(req: Request, res: Response) {
   const { hattyId } = req.query;
   try {
     let result;
-    if (hattyId) {
+    if (hattyId && hattyId !== 'all' && hattyId !== 'null' && hattyId !== 'undefined' && hattyId !== '') {
       result = await query('SELECT u.*, h.name as hatty_name FROM users u JOIN hattys h ON u.hatty_id = h.id WHERE u.status = \'pending\' AND u.hatty_id = $1', [hattyId]);
     } else {
       result = await query('SELECT u.*, h.name as hatty_name FROM users u JOIN hattys h ON u.hatty_id = h.id WHERE u.status = \'pending\'');

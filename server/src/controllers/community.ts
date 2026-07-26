@@ -258,6 +258,24 @@ export async function getVachanas(req: Request, res: Response) {
   }
 }
 
+export async function createVachana(req: Request, res: Response) {
+  const { author, text_kannada, text_english, transliteration, explanation } = req.body;
+  
+  if (!author || !text_kannada || !text_english) {
+    return res.status(400).json({ error: 'Author, Kannada original, and English translation are required.' });
+  }
+
+  try {
+    const result = await query(
+      'INSERT INTO vachanas (author, text_kannada, text_english, transliteration, explanation) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [author, text_kannada, text_english, transliteration || '', explanation || '']
+    );
+    res.status(201).json({ success: true, vachana: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 
 // --- Help Board ---
 export async function getHelpPosts(req: Request, res: Response) {

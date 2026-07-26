@@ -69,6 +69,7 @@ async function startServer() {
 
     // Vachana Library
     app.get('/api/vachanas', comm.getVachanas);
+    app.post('/api/vachanas', comm.createVachana);
 
     // Help Board & Jobs
     app.get('/api/help-board', comm.getHelpPosts);
