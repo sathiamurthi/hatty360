@@ -30,7 +30,15 @@ export async function createGroup(req: Request, res: Response) {
        VALUES ($1, $2, $3, $4) RETURNING *`,
       [name, description, privacy || 'public', created_by || null]
     );
-    res.status(201).json({ success: true, group: result.rows[0] });
+    const group = result.rows[0];
+    if (created_by) {
+      await query(
+        `INSERT INTO group_memberships (group_id, user_id, role)
+         VALUES ($1, $2, 'creator')`,
+        [group.id, created_by]
+      );
+    }
+    res.status(201).json({ success: true, group });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -38,6 +46,7 @@ export async function createGroup(req: Request, res: Response) {
 
 export async function getGroupDetails(req: Request, res: Response) {
   const { id } = req.params;
+  const { user_id } = req.query;
   try {
     const groupRes = await query(`
       SELECT g.*, u.name as creator_name
@@ -50,6 +59,33 @@ export async function getGroupDetails(req: Request, res: Response) {
       return res.status(404).json({ error: 'Group not found' });
     }
 
+    const group = groupRes.rows[0];
+
+    // Check membership
+    let isMember = false;
+    let membershipRole = '';
+    if (user_id) {
+      const memRes = await query(
+        'SELECT * FROM group_memberships WHERE group_id = $1 AND user_id = $2',
+        [id, user_id]
+      );
+      if (memRes.rows.length > 0) {
+        isMember = true;
+        membershipRole = memRes.rows[0].role;
+      }
+    }
+
+    // If group is private and user is not a member, restrict access to threads
+    if (group.privacy === 'private' && !isMember) {
+      return res.json({
+        group,
+        isMember: false,
+        membershipRole,
+        threads: [],
+        members: []
+      });
+    }
+
     const threadsRes = await query(`
       SELECT t.*, u.name as author_name,
         (SELECT COUNT(*) FROM thread_replies r WHERE r.thread_id = t.id) as reply_count
@@ -59,9 +95,19 @@ export async function getGroupDetails(req: Request, res: Response) {
       ORDER BY t.status = 'pinned' DESC, t.created_at DESC
     `, [id]);
 
+    const membersRes = await query(`
+      SELECT m.*, u.name as user_name, u.phone as user_phone, u.profession as user_profession
+      FROM group_memberships m
+      JOIN users u ON m.user_id = u.id
+      WHERE m.group_id = $1
+    `, [id]);
+
     res.json({
-      group: groupRes.rows[0],
-      threads: threadsRes.rows
+      group,
+      isMember,
+      membershipRole,
+      threads: threadsRes.rows,
+      members: membersRes.rows
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -156,6 +202,48 @@ export async function updateThreadStatus(req: Request, res: Response) {
       return res.status(404).json({ error: 'Thread not found' });
     }
     res.json({ success: true, thread: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function addGroupMember(req: Request, res: Response) {
+  const { id: group_id } = req.params;
+  const { user_id, role } = req.body;
+  if (!user_id) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const check = await query('SELECT id FROM group_memberships WHERE group_id = $1 AND user_id = $2', [group_id, user_id]);
+    if (check.rows.length === 0) {
+      await query(
+        'INSERT INTO group_memberships (group_id, user_id, role) VALUES ($1, $2, $3)',
+        [group_id, user_id, role || 'member']
+      );
+    } else {
+      await query(
+        'UPDATE group_memberships SET role = $1 WHERE group_id = $2 AND user_id = $3',
+        [role || 'member', group_id, user_id]
+      );
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function searchUsers(req: Request, res: Response) {
+  const { q } = req.query;
+  if (!q) {
+    return res.json({ users: [] });
+  }
+  try {
+    const result = await query(
+      "SELECT id, name, phone, profession FROM users WHERE name LIKE $1 OR phone LIKE $1 LIMIT 10",
+      [`%${q}%`]
+    );
+    res.json({ users: result.rows });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

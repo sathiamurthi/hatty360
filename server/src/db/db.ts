@@ -89,6 +89,8 @@ export async function initDb() {
         await pgPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS managed_hatty_ids INTEGER[]");
         await pgPool.query("ALTER TABLE announcements ADD COLUMN IF NOT EXISTS target_hatty_ids INTEGER[]");
         await pgPool.query("ALTER TABLE events ADD COLUMN IF NOT EXISTS target_hatty_ids INTEGER[]");
+        await pgPool.query("ALTER TABLE hattys ADD COLUMN IF NOT EXISTS description TEXT");
+        await pgPool.query("ALTER TABLE hattys ADD COLUMN IF NOT EXISTS location TEXT");
         
         await pgPool.query(`
           CREATE TABLE IF NOT EXISTS sponsor_offers (
@@ -125,6 +127,16 @@ export async function initDb() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )
         `);
+        await pgPool.query(`
+          CREATE TABLE IF NOT EXISTS group_memberships (
+            id SERIAL PRIMARY KEY,
+            group_id INTEGER REFERENCES community_groups(id) ON DELETE CASCADE,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            role VARCHAR(50) DEFAULT 'member',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(group_id, user_id)
+          )
+        `);
       } catch (err) {
         console.error('PostgreSQL auto-migrations warning:', err);
       }
@@ -137,6 +149,8 @@ export async function initDb() {
           sqliteDb!.run("ALTER TABLE users ADD COLUMN managed_hatty_ids TEXT", (err) => {});
           sqliteDb!.run("ALTER TABLE announcements ADD COLUMN target_hatty_ids TEXT", (err) => {});
           sqliteDb!.run("ALTER TABLE events ADD COLUMN target_hatty_ids TEXT", (err) => {});
+          sqliteDb!.run("ALTER TABLE hattys ADD COLUMN description TEXT", (err) => {});
+          sqliteDb!.run("ALTER TABLE hattys ADD COLUMN location TEXT", (err) => {});
           
           // Create tables
           sqliteDb!.run(`
@@ -172,6 +186,16 @@ export async function initDb() {
               target_hatty_ids TEXT,
               created_by TEXT NOT NULL,
               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+          `);
+          sqliteDb!.run(`
+            CREATE TABLE IF NOT EXISTS group_memberships (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              group_id INTEGER,
+              user_id INTEGER,
+              role TEXT DEFAULT 'member',
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(group_id, user_id)
             )
           `, () => {
             resolve();

@@ -22,6 +22,12 @@ export default function Groups({ user, language }: GroupsProps) {
   const [threads, setThreads] = useState<any[]>([]);
   const [activeThread, setActiveThread] = useState<any>(null);
   const [replies, setReplies] = useState<any[]>([]);
+  const [isMember, setIsMember] = useState(false);
+  const [membershipRole, setMembershipRole] = useState('');
+  const [groupMembers, setGroupMembers] = useState<any[]>([]);
+  const [userQuery, setUserQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
   // Form states
   const [loading, setLoading] = useState(false);
@@ -55,9 +61,14 @@ export default function Groups({ user, language }: GroupsProps) {
   const fetchGroupDetails = async (groupId: number) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/groups/${groupId}`);
+      const res = await axios.get(`/api/groups/${groupId}`, {
+        params: { user_id: user.id }
+      });
       setActiveGroup(res.data.group);
       setThreads(res.data.threads);
+      setIsMember(res.data.isMember);
+      setMembershipRole(res.data.membershipRole);
+      setGroupMembers(res.data.members || []);
       setView('group');
     } catch (err) {
       console.error(err);
@@ -141,6 +152,51 @@ export default function Groups({ user, language }: GroupsProps) {
     } catch (err) {
       console.error(err);
       alert('Failed to post reply.');
+    }
+  };
+
+  const handleSearchUsers = async (queryStr: string) => {
+    setUserQuery(queryStr);
+    if (queryStr.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    try {
+      const res = await axios.get('/api/users/search', { params: { q: queryStr } });
+      setSearchResults(res.data.users || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddMember = async (targetUserId: number) => {
+    if (!selectedGroupId) return;
+    try {
+      await axios.post(`/api/groups/${selectedGroupId}/members`, {
+        user_id: targetUserId,
+        role: 'member'
+      });
+      alert('Member successfully added to group!');
+      setUserQuery('');
+      setSearchResults([]);
+      fetchGroupDetails(selectedGroupId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to add member.');
+    }
+  };
+
+  const handleJoinPublicGroup = async () => {
+    if (!selectedGroupId) return;
+    try {
+      await axios.post(`/api/groups/${selectedGroupId}/members`, {
+        user_id: user.id,
+        role: 'member'
+      });
+      fetchGroupDetails(selectedGroupId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to join group.');
     }
   };
 
@@ -333,18 +389,50 @@ export default function Groups({ user, language }: GroupsProps) {
                   {activeGroup.privacy === 'public' ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                   {activeGroup.privacy}
                 </span>
+                {isMember && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-100">
+                    Member ({membershipRole})
+                  </span>
+                )}
               </div>
               <h2 className="text-2xl font-black text-slate-900 tracking-tight font-display">{activeGroup.name}</h2>
               <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-3xl">{activeGroup.description}</p>
             </div>
             
-            <button
-              onClick={() => setShowCreateThread(true)}
-              className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer font-display text-sm tracking-wide self-start"
-            >
-              <Plus className="h-4 w-4" />
-              New Thread
-            </button>
+            <div className="flex flex-wrap gap-2.5">
+              {/* Add Member button for creator or admin */}
+              {(activeGroup.created_by === user.id || ['SuperAdmin', 'Admin', 'Thalaivar', 'Secretary'].includes(user.role)) && (
+                <button
+                  onClick={() => setShowAddMemberModal(true)}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-5 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer font-display text-sm tracking-wide"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Member
+                </button>
+              )}
+
+              {/* Join Group button for public groups when not member */}
+              {!isMember && activeGroup.privacy === 'public' && (
+                <button
+                  onClick={handleJoinPublicGroup}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer font-display text-sm tracking-wide"
+                >
+                  <Users className="h-4 w-4" />
+                  Join Group
+                </button>
+              )}
+
+              {/* New Thread button for members */}
+              {isMember && (
+                <button
+                  onClick={() => setShowCreateThread(true)}
+                  className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer font-display text-sm tracking-wide"
+                >
+                  <Plus className="h-4 w-4" />
+                  New Thread
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Create Thread modal */}
@@ -396,55 +484,92 @@ export default function Groups({ user, language }: GroupsProps) {
             </div>
           )}
 
-          {/* Threads list */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-black text-slate-900 font-display">Active Discussions</h3>
-            {threads.length === 0 ? (
-              <p className="text-sm text-slate-400 font-medium py-12 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
-                No discussion threads have been opened in this group yet. Write a topic above to initiate!
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {threads.map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => {
-                      setSelectedThreadId(t.id);
-                      fetchThreadDetails(t.id);
-                    }}
-                    className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer flex flex-col sm:flex-row justify-between sm:items-center gap-4"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        {t.status === 'pinned' && (
-                          <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border border-amber-100">
-                            📌 Pinned
-                          </span>
-                        )}
-                        <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                          t.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {t.status}
-                        </span>
-                      </div>
-                      <h4 className="text-base font-bold text-slate-900 font-display leading-snug">{t.title}</h4>
-                      <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-                        By {t.author_name || 'Member'} • {new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-3 self-end sm:self-center text-xs font-semibold text-slate-500">
-                      <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl">
-                        <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
-                        {t.reply_count} Replies
-                      </span>
-                      <ChevronRight className="h-5 w-5 text-slate-400" />
-                    </div>
-                  </div>
-                ))}
+          {/* If private group and user is not a member, show restricted view */}
+          {activeGroup.privacy === 'private' && !isMember ? (
+            <div className="bg-amber-50/40 border border-amber-100 rounded-3xl p-8 text-center space-y-4 max-w-xl mx-auto mt-6">
+              <div className="h-12 w-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto border border-amber-100">
+                <Lock className="h-6 w-6 text-amber-700" />
               </div>
-            )}
-          </div>
+              <div className="space-y-1">
+                <h4 className="text-base font-extrabold text-slate-900">Private Discussion Group</h4>
+                <p className="text-xs text-slate-500 font-semibold leading-relaxed">
+                  This group is private. You must be added as a member by the group admin to view threads or participate in conversations.
+                </p>
+              </div>
+              
+              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider pt-2 border-t border-slate-100">
+                Group Administrator: {activeGroup.creator_name || 'System Admin'}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Threads list */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-black text-slate-900 font-display">Active Discussions</h3>
+                {threads.length === 0 ? (
+                  <p className="text-sm text-slate-400 font-medium py-12 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    No discussion threads have been opened in this group yet. Write a topic above to initiate!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {threads.map((t) => (
+                      <div
+                        key={t.id}
+                        onClick={() => {
+                          setSelectedThreadId(t.id);
+                          fetchThreadDetails(t.id);
+                        }}
+                        className="bg-white rounded-3xl p-5 border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer flex flex-col sm:flex-row justify-between sm:items-center gap-4"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            {t.status === 'pinned' && (
+                              <span className="flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border border-amber-100">
+                                📌 Pinned
+                              </span>
+                            )}
+                            <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
+                              t.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                            }`}>
+                              {t.status}
+                            </span>
+                          </div>
+                          <h4 className="text-base font-bold text-slate-900 font-display leading-snug">{t.title}</h4>
+                          <p className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                            By {t.author_name || 'Member'} • {new Date(t.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end sm:self-center text-xs font-semibold text-slate-500">
+                          <span className="flex items-center gap-1 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl">
+                            <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
+                            {t.reply_count} Replies
+                          </span>
+                          <ChevronRight className="h-5 w-5 text-slate-400" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Group Members List Section */}
+              {groupMembers.length > 0 && (
+                <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                  <h3 className="text-sm font-black text-slate-900 font-display uppercase tracking-wider">Group Members ({groupMembers.length})</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {groupMembers.map((m) => (
+                      <div key={m.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-100 text-xs font-semibold text-slate-700">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                        <span>{m.user_name}</span>
+                        <span className="text-[10px] text-slate-400">({m.role})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -568,6 +693,65 @@ export default function Groups({ user, language }: GroupsProps) {
             </form>
           </div>
 
+        </div>
+      )}
+
+      {/* Search/Add Member Modal */}
+      {showAddMemberModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 border border-slate-100 animate-scaleUp">
+            <div className="flex justify-between items-center border-b border-slate-50 pb-3">
+              <h3 className="text-lg font-black text-slate-950 font-display">Add Group Member</h3>
+              <button
+                onClick={() => { setShowAddMemberModal(false); setSearchResults([]); setUserQuery(''); }}
+                className="text-xs font-bold text-slate-400 hover:text-slate-600 border border-slate-100 rounded-lg px-2.5 py-1"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Search Member (Name or Phone)</label>
+              <input
+                type="text"
+                value={userQuery}
+                onChange={(e) => handleSearchUsers(e.target.value)}
+                placeholder="Search by name or number..."
+                className="block w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none"
+              />
+            </div>
+
+            {/* Search Results */}
+            <div className="max-h-[220px] overflow-y-auto space-y-2">
+              {searchResults.length === 0 && userQuery.trim().length >= 2 && (
+                <p className="text-xs text-slate-400 py-4 text-center font-medium">No matches found.</p>
+              )}
+              {searchResults.map((u) => {
+                const isAlreadyMember = groupMembers.some(m => m.user_id === u.id);
+                return (
+                  <div key={u.id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-2xl border border-slate-100 transition-colors">
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">{u.name}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold">{u.phone} • {u.profession || 'Member'}</p>
+                    </div>
+                    {isAlreadyMember ? (
+                      <span className="text-[10px] bg-slate-100 text-slate-400 font-bold px-2.5 py-1 rounded-xl">
+                        Member
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleAddMember(u.id)}
+                        className="bg-brand-green hover:bg-brand-green-dark text-white text-xs font-bold px-3 py-1.5 rounded-xl cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 

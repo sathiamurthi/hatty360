@@ -129,6 +129,8 @@ async function startServer() {
     app.post('/api/groups', groups.createGroup);
     app.get('/api/groups/:id', groups.getGroupDetails);
     app.post('/api/groups/:id/threads', groups.createThread);
+    app.post('/api/groups/:id/members', groups.addGroupMember);
+    app.get('/api/users/search', groups.searchUsers);
     app.get('/api/threads/:id', groups.getThreadDetails);
     app.post('/api/threads/:id/replies', groups.createReply);
     app.post('/api/threads/:id/status', groups.updateThreadStatus);
