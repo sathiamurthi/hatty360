@@ -26,6 +26,7 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [feedbackType, setFeedbackType] = useState<'feedback' | 'idea'>('feedback');
   const [loading, setLoading] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Ad request modal state
   const [showAdModal, setShowAdModal] = useState(false);
@@ -538,96 +539,28 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
             )}
           </div>
 
-          {/* Feedback & Idea Form Widget */}
+          {/* Feedback & Idea Link trigger card */}
           <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-3xl p-6 border border-white/5 shadow-xl space-y-4 relative overflow-hidden">
             <div className="absolute -right-16 -bottom-16 h-36 w-36 rounded-full bg-white/5"></div>
-            
-            <h3 className="text-base font-extrabold tracking-tight font-display flex items-center gap-2">
-              {feedbackType === 'idea' ? (
-                <>
-                  <span className="text-blue-400 font-bold">💡</span>
-                  <span>Share a Community Idea</span>
-                </>
-              ) : (
-                <>
-                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
-                  <span>How was your experience?</span>
-                </>
-              )}
-            </h3>
-
-            {/* Type Toggle Tab Row */}
-            <div className="flex bg-slate-800 p-1 rounded-xl gap-1 text-[10px] uppercase tracking-wide relative z-10">
-              <button
-                type="button"
-                onClick={() => setFeedbackType('feedback')}
-                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
-                  feedbackType === 'feedback' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-300'
-                }`}
-              >
-                ⭐ Feedback
-              </button>
-              <button
-                type="button"
-                onClick={() => setFeedbackType('idea')}
-                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
-                  feedbackType === 'idea' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-300'
-                }`}
-              >
-                💡 Share Idea
-              </button>
+            <div className="space-y-1 relative z-10">
+              <h3 className="text-sm font-extrabold tracking-tight font-display flex items-center gap-1.5">
+                <span>💡</span> Share Feedback / Idea
+              </h3>
+              <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
+                Have suggestions to improve the platform or ideas to connect our villages? We'd love to hear from you!
+              </p>
             </div>
-
-            {feedbackSubmitted ? (
-              <div className="bg-brand-green/10 border border-brand-green-light/20 text-brand-green-light rounded-2xl p-4 text-xs font-semibold text-center animate-pulse">
-                {feedbackType === 'idea' ? 'Thank you for sharing your idea!' : t.feedbackSuccess}
-              </div>
-            ) : (
-              <form onSubmit={submitFeedback} className="space-y-3 relative z-10">
-                {feedbackType === 'feedback' && (
-                  <>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                      Rate the App/Platform:
-                    </p>
-                    {/* Stars selector */}
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setRating(star)}
-                          className="transition-transform hover:scale-110"
-                        >
-                          <Star className={`h-6 w-6 cursor-pointer ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-600'}`} />
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
-
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  {feedbackType === 'idea' ? 'Description of your idea:' : 'Comments:'}
-                </p>
-
-                <textarea
-                  rows={3}
-                  value={feedbackComment}
-                  onChange={(e) => setFeedbackComment(e.target.value)}
-                  placeholder={feedbackType === 'idea' ? 'Tell us how we can connect, share, or grow together...' : 'Share your thoughts...'}
-                  required
-                  className="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-green-light"
-                ></textarea>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-2.5 px-4 rounded-xl w-full text-xs transition-all flex items-center justify-center gap-1 cursor-pointer border border-transparent shadow-md"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  {feedbackType === 'idea' ? 'Submit Idea' : t.feedbackSubmit}
-                </button>
-              </form>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                setFeedbackSubmitted(false);
+                setFeedbackComment('');
+                setShowFeedbackModal(true);
+              }}
+              className="w-full py-2.5 px-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl text-xs transition-all cursor-pointer text-center block relative z-10"
+            >
+              Share feedback or idea
+            </button>
           </div>
 
         </div>
@@ -811,6 +744,124 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
                 </form>
               )}
             </div>
+          </div>
+        </div>
+      )}
+      {/* FEEDBACK & IDEA SUBMISSION FORM MODAL */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-950 text-white rounded-3xl w-full max-w-md shadow-2xl border border-white/10 overflow-hidden animate-scaleIn flex flex-col p-6 space-y-4">
+            
+            <div className="flex justify-between items-center border-b border-white/10 pb-3">
+              <h3 className="text-base font-extrabold tracking-tight font-display flex items-center gap-2">
+                {feedbackType === 'idea' ? (
+                  <>
+                    <span className="text-blue-400 font-bold">💡</span>
+                    <span>Share a Community Idea</span>
+                  </>
+                ) : (
+                  <>
+                    <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                    <span>How was your experience?</span>
+                  </>
+                )}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowFeedbackModal(false)}
+                className="text-xs font-bold text-slate-400 hover:text-slate-200 border border-white/10 rounded-lg px-2.5 py-1"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Type Toggle Tab Row */}
+            <div className="flex bg-slate-900 p-1 rounded-xl gap-1 text-[10px] uppercase tracking-wide relative z-10">
+              <button
+                type="button"
+                onClick={() => setFeedbackType('feedback')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
+                  feedbackType === 'feedback' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                ⭐ Feedback
+              </button>
+              <button
+                type="button"
+                onClick={() => setFeedbackType('idea')}
+                className={`flex-1 py-1.5 rounded-lg font-bold transition-all text-center cursor-pointer ${
+                  feedbackType === 'idea' ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                💡 Share Idea
+              </button>
+            </div>
+
+            {feedbackSubmitted ? (
+              <div className="space-y-4 py-4 text-center">
+                <div className="bg-brand-green/20 border border-brand-green-light/30 text-brand-green-light rounded-2xl p-4 text-xs font-semibold animate-pulse">
+                  {feedbackType === 'idea' ? 'Thank you for sharing your idea!' : t.feedbackSuccess}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="px-4 py-2 bg-white text-slate-900 font-bold rounded-xl text-xs"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form 
+                onSubmit={async (e) => {
+                  await submitFeedback(e);
+                  confetti({ particleCount: 50, spread: 40 });
+                }} 
+                className="space-y-3 relative z-10"
+              >
+                {feedbackType === 'feedback' && (
+                  <>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                      Rate the App/Platform:
+                    </p>
+                    {/* Stars selector */}
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(star)}
+                          className="transition-transform hover:scale-110"
+                        >
+                          <Star className={`h-6 w-6 cursor-pointer ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-slate-600'}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                  {feedbackType === 'idea' ? 'Description of your idea:' : 'Comments:'}
+                </p>
+
+                <textarea
+                  rows={3}
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder={feedbackType === 'idea' ? 'Tell us how we can connect, share, or grow together...' : 'Share your thoughts...'}
+                  required
+                  className="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-brand-green-light resize-none"
+                ></textarea>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-2.5 px-4 rounded-xl w-full text-xs transition-all flex items-center justify-center gap-1 cursor-pointer border border-transparent shadow-md"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  {feedbackType === 'idea' ? 'Submit Idea' : t.feedbackSubmit}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
