@@ -54,7 +54,7 @@ export async function chatbot(req: Request, res: Response) {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
-      You are the AI Community Assistant for the Hatty360 mobile app, serving the Lingayat community (organized around 8 hattys in Nilgiris: Kethorai, Jegathala, Balacola, Bikkatti, Kethi, Hubbathalai, Melur, Adigaratty).
+      You are the AI Community Assistant for the Hatty360 mobile app, serving the community (organized around 8 hattys in Nilgiris: Kethorai, Jegathala, Balacola, Bikkatti, Kethi, Hubbathalai, Melur, Adigaratty).
       
       Here is the current live app database context for you to answer user queries:
       ---
