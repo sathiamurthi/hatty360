@@ -192,7 +192,7 @@ export async function getHattys(req: Request, res: Response) {
 }
 
 export async function createHatty(req: Request, res: Response) {
-  const { name, description, location, role } = req.body;
+  const { name, region, description, location, role } = req.body;
   if (role !== 'SuperAdmin') {
     return res.status(403).json({ error: 'Access denied. Only SuperAdmin can configure hattys.' });
   }
@@ -201,8 +201,8 @@ export async function createHatty(req: Request, res: Response) {
   }
   try {
     const result = await query(
-      'INSERT INTO hattys (name, description, location) VALUES ($1, $2, $3) RETURNING *',
-      [name, description || '', location || '']
+      'INSERT INTO hattys (name, region, description, location) VALUES ($1, $2, $3, $4) RETURNING *',
+      [name, region || location || 'Ooty Region', description || '', location || '']
     );
     res.status(201).json({ success: true, hatty: result.rows[0] });
   } catch (err: any) {

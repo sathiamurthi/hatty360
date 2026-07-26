@@ -21,6 +21,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
   const [newVillageName, setNewVillageName] = useState('');
   const [newVillageLocation, setNewVillageLocation] = useState('');
   const [newVillageDesc, setNewVillageDesc] = useState('');
+  const [newVillageRegion, setNewVillageRegion] = useState('');
 
   // Member role config states
   const [allMembers, setAllMembers] = useState<any[]>([]);
@@ -103,6 +104,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
     try {
       await axios.post('/api/auth/hattys', {
         name: newVillageName,
+        region: newVillageRegion,
         description: newVillageDesc,
         location: newVillageLocation,
         role: 'SuperAdmin'
@@ -111,6 +113,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
       setNewVillageName('');
       setNewVillageDesc('');
       setNewVillageLocation('');
+      setNewVillageRegion('');
       // Re-fetch
       const res = await axios.get('/api/auth/hattys');
       setHattys(res.data.hattys || []);
@@ -928,6 +931,16 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
                       value={newVillageLocation}
                       onChange={(e) => setNewVillageLocation(e.target.value)}
                       placeholder="e.g. Nilgiris, Tamil Nadu"
+                      className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Region</label>
+                    <input
+                      type="text"
+                      value={newVillageRegion}
+                      onChange={(e) => setNewVillageRegion(e.target.value)}
+                      placeholder="e.g. Ooty Region"
                       className="block w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 text-xs font-semibold focus:outline-none"
                     />
                   </div>
