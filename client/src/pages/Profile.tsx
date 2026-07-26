@@ -18,18 +18,44 @@ export default function Profile({ user, onProfileUpdate, language }: ProfileProp
   const [profession, setProfession] = useState(user?.profession || '');
   const [location, setLocation] = useState(user?.location || '');
   const [selectedLanguage, setSelectedLanguage] = useState(user?.selected_language || language || 'en');
+  const [email, setEmail] = useState(user?.email || '');
+  const [showContactPublicly, setShowContactPublicly] = useState(user?.show_contact_publicly || false);
+  const [contactRequests, setContactRequests] = useState<any[]>([]);
   
   const [hattys, setHattys] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  const fetchContactRequests = async () => {
+    try {
+      const res = await axios.get('/api/contact-requests', { params: { userId: user.id } });
+      setContactRequests(res.data.requests || []);
+    } catch (err) {
+      console.error('Failed to fetch contact requests:', err);
+    }
+  };
+
+  const handleRequestAction = async (requestId: number, status: 'approved' | 'rejected') => {
+    try {
+      await axios.post(`/api/contact-requests/${requestId}/action`, { status });
+      confetti({ particleCount: 40, colors: status === 'approved' ? ['#10b981'] : ['#f43f5e'] });
+      fetchContactRequests();
+    } catch (err) {
+      console.error('Failed to handle contact request action:', err);
+    }
+  };
+
   useEffect(() => {
     // Load hattys list for dropdown
     axios.get('/api/auth/hattys')
       .then(res => setHattys(res.data.hattys))
       .catch(err => console.error(err));
-  }, []);
+
+    if (user) {
+      fetchContactRequests();
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +73,9 @@ export default function Profile({ user, onProfileUpdate, language }: ProfileProp
         mother_name: motherName,
         profession: profession,
         location: location,
-        selected_language: selectedLanguage
+        selected_language: selectedLanguage,
+        email: email,
+        show_contact_publicly: showContactPublicly
       });
 
       confetti({ particleCount: 80, spread: 60 });
@@ -239,6 +267,40 @@ export default function Profile({ user, onProfileUpdate, language }: ProfileProp
             </select>
           </div>
 
+          {/* Contact Details & Privacy Settings */}
+          <div className="bg-slate-50/50 border border-slate-100 rounded-3xl p-5 space-y-4">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 border-b border-slate-100 pb-2">
+              🔒 Contact Details & Privacy Settings
+            </h4>
+            
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Email Address</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="e.g. name@example.com"
+                className="block w-full px-4 py-3 border border-slate-200 bg-white rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-semibold"
+              />
+            </div>
+
+            <div className="flex items-start gap-3 mt-3">
+              <input
+                type="checkbox"
+                id="show_contact_publicly"
+                checked={showContactPublicly}
+                onChange={(e) => setShowContactPublicly(e.target.checked)}
+                className="h-4.5 w-4.5 rounded border-slate-300 text-brand-green focus:ring-brand-green mt-0.5 cursor-pointer"
+              />
+              <label htmlFor="show_contact_publicly" className="text-xs text-slate-600 font-semibold leading-relaxed cursor-pointer select-none">
+                Show my phone number and email publicly in the Directory.<br />
+                <span className="text-[10px] text-slate-400 font-normal">
+                  If unchecked (default), other members must click <strong>"Request Phone"</strong> and wait for your approval before seeing your contact details.
+                </span>
+              </label>
+            </div>
+          </div>
+
           {/* Submit Button */}
           <button
             type="submit"
@@ -252,6 +314,53 @@ export default function Profile({ user, onProfileUpdate, language }: ProfileProp
         </form>
 
       </div>
+
+      {/* Incoming Access Requests Panel */}
+      {contactRequests.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-xl space-y-4 mt-6 animate-fadeIn">
+          <h3 className="text-lg font-black text-slate-900 font-display flex items-center gap-2 border-b border-slate-50 pb-3">
+            🔑 Incoming Access Requests ({contactRequests.length})
+          </h3>
+          <p className="text-xs text-slate-500 font-medium">
+            The following members are requesting to view your phone number and email in order to connect with you.
+          </p>
+          
+          <div className="divide-y divide-slate-100">
+            {contactRequests.map((req: any) => (
+              <div key={req.id} className="py-4 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-brand-green/10 text-brand-green flex items-center justify-center font-bold text-sm border border-brand-green/20 uppercase shrink-0">
+                    {req.requester_name.charAt(0)}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">{req.requester_name}</h4>
+                    <p className="text-[10px] text-slate-400 font-semibold uppercase">
+                      {req.requester_profession || 'Member'} • {req.requester_hatty_name || 'No Hatty'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleRequestAction(req.id, 'approved')}
+                    className="px-3.5 py-1.5 bg-brand-green hover:bg-brand-green-dark text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRequestAction(req.id, 'rejected')}
+                    className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

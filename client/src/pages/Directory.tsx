@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, Briefcase, Phone, HelpCircle, Eye, ShieldCheck, Filter } from 'lucide-react';
 import axios from 'axios';
+import confetti from 'canvas-confetti';
 
 interface DirectoryProps {
   user: any;
@@ -14,7 +15,6 @@ export default function Directory({ user, language }: DirectoryProps) {
   const [hattyFilter, setHattyFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
   const [professionFilter, setProfessionFilter] = useState('');
-  const [revealedPhones, setRevealedPhones] = useState<{[key: number]: string}>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -34,7 +34,8 @@ export default function Directory({ user, language }: DirectoryProps) {
           search,
           hatty_id: hattyFilter || undefined,
           location: locationFilter || undefined,
-          profession: professionFilter || undefined
+          profession: professionFilter || undefined,
+          requesterId: user?.id || undefined
         }
       });
       setMembers(res.data.members);
@@ -52,18 +53,20 @@ export default function Directory({ user, language }: DirectoryProps) {
 
   const requestPhone = async (memberId: number) => {
     if (!user) {
-      alert('You must be logged in to view contact details.');
+      alert('You must be logged in to request contact details.');
       return;
     }
 
     try {
-      const res = await axios.post(`/api/members/${memberId}/phone`, {
-        requesterPhone: user.phone
+      await axios.post('/api/contact-requests', {
+        requester_id: user.id,
+        requested_id: memberId
       });
-      setRevealedPhones(prev => ({ ...prev, [memberId]: res.data.phone }));
+      fetchMembers();
+      confetti({ particleCount: 30, spread: 40 });
     } catch (err) {
       console.error(err);
-      alert('Could not retrieve phone number.');
+      alert('Could not submit contact access request.');
     }
   };
 
@@ -258,15 +261,26 @@ export default function Directory({ user, language }: DirectoryProps) {
 
                   {/* Phone reveal block */}
                   <div className="mt-4 pt-3 border-t border-slate-50 flex flex-col gap-2 relative z-10">
-                    {revealedPhones[member.id] ? (
-                      <div className="flex items-center gap-2 text-brand-green font-bold text-sm bg-brand-green/5 p-2.5 rounded-xl border border-brand-green/10">
-                        <Phone className="h-4 w-4" />
-                        <span>{revealedPhones[member.id]}</span>
+                    {member.phone ? (
+                      <div className="flex flex-col gap-1 text-slate-800 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-semibold">
+                        <div className="flex items-center gap-2 text-brand-green font-bold">
+                          <Phone className="h-3.5 w-3.5" />
+                          <span>{member.phone}</span>
+                        </div>
+                        {member.email && (
+                          <div className="text-[10px] text-slate-500 font-medium truncate mt-1">
+                            ✉️ {member.email}
+                          </div>
+                        )}
+                      </div>
+                    ) : member.contact_request_status === 'pending' ? (
+                      <div className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-amber-50 border border-amber-100 text-amber-800 rounded-xl text-xs font-bold font-sans">
+                        ⏳ Pending Approval
                       </div>
                     ) : (
                       <button
                         onClick={() => requestPhone(member.id)}
-                        className="w-full flex items-center justify-center gap-1 py-2 px-3 bg-brand-blue/5 hover:bg-brand-blue/10 border border-brand-blue/15 text-brand-blue font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 bg-brand-blue/5 hover:bg-brand-blue/10 border border-brand-blue/15 text-brand-blue font-bold rounded-xl text-xs transition-all cursor-pointer hover:scale-[1.01]"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         {t.reqPhone}

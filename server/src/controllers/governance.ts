@@ -255,13 +255,21 @@ export async function submitAd(req: Request, res: Response) {
       [advId, title, description, ad_type, price || 250.00, duration_weeks || 4]
     );
 
-    res.status(201).json({ success: true, ad: adRes.rows[0], message: 'Ad submitted and pending admin approval.' });
+    // 3. Print simulated email notification to SuperAdmin
+    console.log(`[EMAIL NOTIFICATION] Send to: superadmin@demandgeniusai.com | Subject: New Advertisement Request | Body: Business "${business_name}" submitted an ad request for "${title}" (${ad_type}). Please log in as SuperAdmin to review and publish.`);
+
+    res.status(201).json({ success: true, ad: adRes.rows[0], message: 'Ad submitted and pending SuperAdmin review.' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 }
 
 export async function getPendingAds(req: Request, res: Response) {
+  const { role } = req.query;
+  if (role !== 'SuperAdmin') {
+    return res.status(403).json({ error: 'Access denied. Only SuperAdmin can review pending ads.' });
+  }
+
   try {
     const result = await query(`
       SELECT a.*, adv.business_name, adv.category, adv.contact_phone 
@@ -277,7 +285,11 @@ export async function getPendingAds(req: Request, res: Response) {
 
 export async function approveAd(req: Request, res: Response) {
   const { id } = req.params;
-  const { status } = req.body; // 'approved' or 'rejected'
+  const { status, role } = req.body; // 'approved' or 'rejected'
+
+  if (role !== 'SuperAdmin') {
+    return res.status(403).json({ error: 'Access denied. Only SuperAdmin can publish or approve ads.' });
+  }
 
   try {
     const adRes = await query('UPDATE ads SET status = $1 WHERE id = $2 RETURNING *', [status, id]);

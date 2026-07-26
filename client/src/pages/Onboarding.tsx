@@ -11,6 +11,7 @@ interface OnboardingProps {
 export default function Onboarding({ onAuthSuccess, language, setLanguage }: OnboardingProps) {
   const [step, setStep] = useState<'login' | 'profile' | 'pending'>('login');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ export default function Onboarding({ onAuthSuccess, language, setLanguage }: Onb
 
     try {
       // 1. Try to login
-      const loginRes = await axios.post('/api/auth/login', { phone });
+      const loginRes = await axios.post('/api/auth/login', { phone, password });
       
       if (loginRes.data.status === 'approved') {
         onAuthSuccess(loginRes.data.user);
@@ -190,30 +191,50 @@ export default function Onboarding({ onAuthSuccess, language, setLanguage }: Onb
                   </div>
                   <input
                     id="phone-number"
-                    type="tel"
+                    type="text"
                     required
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g,''))}
-                    placeholder="Enter 10-digit number"
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter phone or admin email"
                     className="block w-full pl-10 pr-3 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
                   />
                 </div>
               </div>
 
+              {/* Password field for SuperAdmin */}
+              {phone === 'superadmin@demandgeniusai.com' && (
+                <div>
+                  <label htmlFor="admin-password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    SuperAdmin Password
+                  </label>
+                  <input
+                    id="admin-password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter Admin Password"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
+                  />
+                </div>
+              )}
+
               {/* Enter name if registering */}
-              <div>
-                <label htmlFor="full-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Full Name <span className="text-slate-400 font-normal">(Required for New Registrations)</span>
-                </label>
-                <input
-                  id="full-name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter full name"
-                  className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
-                />
-              </div>
+              {phone !== 'superadmin@demandgeniusai.com' && (
+                <div>
+                  <label htmlFor="full-name" className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                    Full Name <span className="text-slate-400 font-normal">(Required for New Registrations)</span>
+                  </label>
+                  <input
+                    id="full-name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter full name"
+                    className="block w-full px-4 py-3 border border-slate-200 rounded-xl text-slate-800 focus:outline-none input-glow text-sm font-medium"
+                  />
+                </div>
+              )}
             </div>
 
             <div>

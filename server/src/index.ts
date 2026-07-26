@@ -44,6 +44,12 @@ async function startServer() {
     app.get('/api/auth/pending', auth.getPendingUsers);
     app.get('/api/auth/hattys', auth.getHattys);
 
+    // Contact Access Requests
+    app.get('/api/contact-requests', auth.getContactRequests);
+    app.post('/api/contact-requests/:id/action', auth.handleContactRequestAction);
+    app.post('/api/contact-requests', auth.requestContactAccess);
+    app.get('/api/contact-requests/status', auth.getUserContactStatus);
+
     // Member Directory
     app.get('/api/members', comm.getMembers);
     app.post('/api/members/:id/phone', comm.getMemberPhone);

@@ -65,7 +65,7 @@ export default function App() {
 
       {/* Main App Screens */}
       {user ? (
-        <div className="flex-grow">
+        <div className="flex-grow lg:pl-64">
           {/* Hero Banner: Only displayed on Home screen */}
           {tab === 'home' && (
             <HeroSection

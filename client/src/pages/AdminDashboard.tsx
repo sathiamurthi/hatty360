@@ -87,7 +87,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
         const res = await axios.get('/api/auth/pending', { params: { hattyId: hattyFilter } });
         setPendingUsers(res.data.pendingUsers);
       } else if (activeTab === 'ads') {
-        const res = await axios.get('/api/ads/pending');
+        const res = await axios.get('/api/ads/pending', { params: { role: user?.role } });
         setPendingAds(res.data.pendingAds);
       } else if (activeTab === 'feedback') {
         const res = await axios.get('/api/feedback');
@@ -112,7 +112,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
 
   const handleAdApproval = async (adId: number, status: 'approved' | 'rejected') => {
     try {
-      await axios.post(`/api/ads/${adId}/approve`, { status });
+      await axios.post(`/api/ads/${adId}/approve`, { status, role: user?.role });
       confetti({ particleCount: 50, spread: 60 });
       fetchDashboardData();
     } catch (err) {
@@ -206,17 +206,19 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
           Member Approvals ({pendingUsers.length})
         </button>
 
-        {user?.role === 'Admin' && (
+        {(user?.role === 'Admin' || user?.role === 'SuperAdmin') && (
           <>
-            <button
-              onClick={() => setActiveTab('ads')}
-              className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'ads' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Megaphone className="h-4 w-4" />
-              Ad Approvals ({pendingAds.length})
-            </button>
+            {user?.role === 'SuperAdmin' && (
+              <button
+                onClick={() => setActiveTab('ads')}
+                className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === 'ads' ? 'bg-slate-900 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Megaphone className="h-4 w-4" />
+                Ad Approvals ({pendingAds.length})
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('feedback')}
               className={`px-5 py-3 text-xs font-bold rounded-xl tracking-wide uppercase transition-colors flex items-center gap-1.5 cursor-pointer ${
@@ -408,7 +410,7 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
         )}
 
         {/* PANEL 2: Ad Approvals */}
-        {activeTab === 'ads' && user?.role === 'Admin' && (
+        {activeTab === 'ads' && user?.role === 'SuperAdmin' && (
           <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
             <h3 className="text-lg font-black text-slate-900 font-display border-b border-slate-50 pb-3">
               Pending Sponsored Campaign Ads ({pendingAds.length})

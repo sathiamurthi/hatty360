@@ -3,17 +3,34 @@ import { query } from '../db/db';
 
 // --- Member Directory ---
 export async function getMembers(req: Request, res: Response) {
-  const { hatty_id, location, profession, search } = req.query;
+  const { hatty_id, location, profession, search, requesterId } = req.query;
 
   try {
+    let requesterRole = 'Member';
+    if (requesterId) {
+      const roleRes = await query('SELECT role FROM users WHERE id = $1', [requesterId]);
+      if (roleRes.rows.length > 0) {
+        requesterRole = roleRes.rows[0].role;
+      }
+    }
+
     let sql = `
-      SELECT u.id, u.name, u.gender, u.location, u.profession, u.hatty_id, h.name as hatty_name, u.role, u.created_at
+      SELECT u.id, u.name, u.gender, u.location, u.profession, u.hatty_id, h.name as hatty_name, u.role, u.created_at, u.show_contact_publicly,
+             (SELECT status FROM contact_requests WHERE requester_id = $1 AND requested_id = u.id) as contact_request_status,
+             CASE 
+               WHEN u.show_contact_publicly = TRUE OR u.id = $1 OR $2 IN ('Admin', 'SuperAdmin') OR (SELECT status FROM contact_requests WHERE requester_id = $1 AND requested_id = u.id) = 'approved' THEN u.phone
+               ELSE NULL
+             END as phone,
+             CASE 
+               WHEN u.show_contact_publicly = TRUE OR u.id = $1 OR $2 IN ('Admin', 'SuperAdmin') OR (SELECT status FROM contact_requests WHERE requester_id = $1 AND requested_id = u.id) = 'approved' THEN u.email
+               ELSE NULL
+             END as email
       FROM users u
       LEFT JOIN hattys h ON u.hatty_id = h.id
       WHERE u.status = 'approved'
     `;
-    const params: any[] = [];
-    let paramIndex = 1;
+    const params: any[] = [requesterId ? parseInt(requesterId as string) : null, requesterRole];
+    let paramIndex = 3;
 
     if (hatty_id) {
       sql += ` AND u.hatty_id = $${paramIndex++}`;
@@ -41,20 +58,53 @@ export async function getMembers(req: Request, res: Response) {
   }
 }
 
-// Request member phone number (returns the phone number and represents audit-logging)
+// Request member phone number (returns the phone number if publicly visible or request approved)
 export async function getMemberPhone(req: Request, res: Response) {
   const { id } = req.params;
-  const { requesterPhone } = req.body; // Logged for audit purposes
+  const { requesterId, requesterPhone } = req.body; // Logged for audit purposes
 
   try {
-    console.log(`Directory Audit: Phone number of member ID ${id} requested by user ${requesterPhone}`);
-    const result = await query('SELECT name, phone FROM users WHERE id = $1 AND status = \'approved\'', [id]);
+    console.log(`Directory Audit: Phone number of member ID ${id} requested by user ${requesterPhone} (ID: ${requesterId})`);
     
+    // Fetch the target user details
+    const result = await query('SELECT name, phone, email, show_contact_publicly, role FROM users WHERE id = $1 AND status = \'approved\'', [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Member not found or not approved' });
     }
+    
+    const targetUser = result.rows[0];
 
-    res.json({ name: result.rows[0].name, phone: result.rows[0].phone });
+    // Check if requester is same as requested user
+    if (String(requesterId) === String(id)) {
+      return res.json({ name: targetUser.name, phone: targetUser.phone, email: targetUser.email });
+    }
+
+    // Check if requester is Admin or SuperAdmin
+    if (requesterId) {
+      const reqUser = await query('SELECT role FROM users WHERE id = $1', [requesterId]);
+      const reqRole = reqUser.rows[0]?.role;
+      if (reqRole === 'Admin' || reqRole === 'SuperAdmin') {
+        return res.json({ name: targetUser.name, phone: targetUser.phone, email: targetUser.email });
+      }
+    }
+
+    // Check if target user has public contact visibility
+    if (targetUser.show_contact_publicly) {
+      return res.json({ name: targetUser.name, phone: targetUser.phone, email: targetUser.email });
+    }
+
+    // Check if there is an approved request
+    if (requesterId) {
+      const requestRes = await query(
+        'SELECT status FROM contact_requests WHERE requester_id = $1 AND requested_id = $2',
+        [requesterId, id]
+      );
+      if (requestRes.rows.length > 0 && requestRes.rows[0].status === 'approved') {
+        return res.json({ name: targetUser.name, phone: targetUser.phone, email: targetUser.email });
+      }
+    }
+
+    return res.status(403).json({ error: 'Access Denied. You need to request contact access and wait for approval.' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Calendar, Tag, Star, Send, MapPin, Check, Plus, MessageSquare } from 'lucide-react';
+import { Megaphone, Calendar, Tag, Star, Send, MapPin, Check, Plus, MessageSquare, X } from 'lucide-react';
 import axios from 'axios';
 import confetti from 'canvas-confetti';
 
@@ -20,6 +20,19 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Ad request modal state
+  const [showAdModal, setShowAdModal] = useState(false);
+  const [adBusinessName, setAdBusinessName] = useState('');
+  const [adCategory, setAdCategory] = useState('Retail');
+  const [adContactPhone, setAdContactPhone] = useState(user?.phone || '');
+  const [adEmail, setAdEmail] = useState('');
+  const [adTitle, setAdTitle] = useState('');
+  const [adDescription, setAdDescription] = useState('');
+  const [adType, setAdType] = useState('Banner');
+  const [adDuration, setAdDuration] = useState('4');
+  const [adSuccessMsg, setAdSuccessMsg] = useState('');
+  const [adError, setAdError] = useState('');
 
   // Localization
   const t = {
@@ -178,6 +191,42 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
     }
   };
 
+  const handleAdSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adBusinessName || !adContactPhone || !adTitle || !adDescription) {
+      setAdError('Please fill in all required fields.');
+      return;
+    }
+    setAdError('');
+    setLoading(true);
+    try {
+      await axios.post('/api/ads', {
+        business_name: adBusinessName,
+        category: adCategory,
+        contact_phone: adContactPhone,
+        email: adEmail,
+        title: adTitle,
+        description: adDescription,
+        ad_type: adType,
+        duration_weeks: parseInt(adDuration),
+        price: 250.00
+      });
+      
+      confetti({ particleCount: 60, spread: 80 });
+      setAdSuccessMsg('Your advertisement request has been submitted! An email notification has been dispatched to superadmin@demandgeniusai.com. Your ad will be published once approved by the SuperAdmin.');
+      
+      // Clear form fields
+      setAdBusinessName('');
+      setAdTitle('');
+      setAdDescription('');
+      setAdEmail('');
+    } catch (err: any) {
+      setAdError(err.response?.data?.error || 'Failed to submit ad request. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 font-sans">
       
@@ -322,6 +371,19 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
                 ))}
               </div>
             )}
+            {user?.role !== 'SuperAdmin' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdSuccessMsg('');
+                  setAdError('');
+                  setShowAdModal(true);
+                }}
+                className="w-full mt-2 flex items-center justify-center gap-2 py-2.5 px-4 border border-dashed border-slate-200 text-slate-600 hover:text-brand-green hover:border-brand-green hover:bg-brand-green/5 rounded-2xl text-xs font-bold transition-all cursor-pointer"
+              >
+                📢 Request Sponsor Ad Listing
+              </button>
+            )}
           </div>
 
           {/* Feedback Form Widget */}
@@ -381,6 +443,187 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
         </div>
 
       </div>
+
+      {/* ADVERTISEMENT REQUEST FORM MODAL */}
+      {showAdModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-100 overflow-hidden animate-scaleIn flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 p-6 text-white flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-lg font-black tracking-tight font-display flex items-center gap-2">
+                  📢 Request Sponsor Ad Listing
+                </h3>
+                <p className="text-[10px] text-yellow-100 font-bold tracking-wide uppercase mt-0.5">
+                  Published on Front Page after SuperAdmin Approval
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAdModal(false)}
+                className="p-1 rounded-full bg-black/10 hover:bg-black/20 text-white transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto space-y-4">
+              {adSuccessMsg ? (
+                <div className="text-center py-6 space-y-4">
+                  <div className="h-12 w-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto text-2xl">
+                    ✓
+                  </div>
+                  <h4 className="text-base font-extrabold text-slate-900 font-display">Submitted Successfully!</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                    {adSuccessMsg}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAdModal(false)}
+                    className="bg-brand-green hover:bg-brand-green-dark text-white font-bold py-2 px-6 rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleAdSubmit} className="space-y-3">
+                  {adError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-xl p-3">
+                      {adError}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Business Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={adBusinessName}
+                        onChange={(e) => setAdBusinessName(e.target.value)}
+                        placeholder="e.g. Lingayat Caterers"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Category *
+                      </label>
+                      <select
+                        value={adCategory}
+                        onChange={(e) => setAdCategory(e.target.value)}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                      >
+                        <option value="Retail">Retail & Shop</option>
+                        <option value="Catering">Food & Catering</option>
+                        <option value="Books">Books & Library</option>
+                        <option value="Transport">Transport & Cab</option>
+                        <option value="Services">Services & Others</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Contact Phone *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={adContactPhone}
+                        onChange={(e) => setAdContactPhone(e.target.value)}
+                        placeholder="10-digit number"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Contact Email
+                      </label>
+                      <input
+                        type="email"
+                        value={adEmail}
+                        onChange={(e) => setAdEmail(e.target.value)}
+                        placeholder="e.g. name@domain.com"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                      Ad Campaign Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={adTitle}
+                      onChange={(e) => setAdTitle(e.target.value)}
+                      placeholder="e.g. 10% Discount on Catering Orders!"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                      Ad Description / Promo Details *
+                    </label>
+                    <textarea
+                      required
+                      rows={3}
+                      value={adDescription}
+                      onChange={(e) => setAdDescription(e.target.value)}
+                      placeholder="Explain your promotion, menu, address details, or special offers..."
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                    ></textarea>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Ad Type *
+                      </label>
+                      <select
+                        value={adType}
+                        onChange={(e) => setAdType(e.target.value)}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                      >
+                        <option value="Coupon">Discount Coupon</option>
+                        <option value="Banner">Promo Listing Banner</option>
+                        <option value="Event">Sponsored Event</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">
+                        Duration *
+                      </label>
+                      <select
+                        value={adDuration}
+                        onChange={(e) => setAdDuration(e.target.value)}
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-green bg-white text-slate-800"
+                      >
+                        <option value="4">4 Weeks ($250.00)</option>
+                        <option value="8">8 Weeks ($450.00)</option>
+                        <option value="12">12 Weeks ($600.00)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-brand-green hover:bg-brand-green-dark text-white font-bold py-3 px-4 rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer mt-4 uppercase tracking-wider"
+                  >
+                    {loading ? 'Submitting...' : 'Submit Advertisement Request'}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
