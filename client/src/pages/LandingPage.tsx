@@ -279,12 +279,23 @@ export default function LandingPage({ user, language, setTab }: LandingPageProps
       )}
 
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-brand-green/10 via-brand-blue/5 to-slate-50 border border-slate-100 rounded-3xl p-6 md:p-8 mb-8 shadow-sm relative overflow-hidden">
+      <div className="bg-gradient-to-r from-brand-green/10 via-brand-blue/5 to-slate-50 border border-slate-100 rounded-3xl p-6 md:p-8 mb-8 shadow-sm relative overflow-hidden flex flex-col md:flex-row justify-between md:items-center gap-6">
         <div className="absolute -right-24 -bottom-24 h-48 w-48 rounded-full bg-brand-green/5"></div>
         <div className="relative z-10">
           <h2 className="text-3xl font-black text-slate-900 tracking-tight font-display">{t.welcome}</h2>
           <p className="text-sm text-slate-600 font-medium mt-1">{t.welcomeSub}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => {
+            setFeedbackSubmitted(false);
+            setFeedbackComment('');
+            setShowFeedbackModal(true);
+          }}
+          className="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-2xl transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer font-display text-sm tracking-wide self-start shrink-0 relative z-10"
+        >
+          <span>💡</span> Share Feedback / Idea
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

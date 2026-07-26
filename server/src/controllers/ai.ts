@@ -51,7 +51,7 @@ export async function chatbot(req: Request, res: Response) {
     };
 
     // 2. Query Gemini model
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `
       You are the AI Community Assistant for the Hatty360 mobile app, serving the Lingayat community (organized around 8 hattys in Nilgiris: Kethorai, Jegathala, Balacola, Bikkatti, Kethi, Hubbathalai, Melur, Adigaratty).
@@ -90,7 +90,7 @@ export async function draftAssist(req: Request, res: Response) {
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const prompt = `
       You are a professional secretary assistant helping a Hatty Thalaivar (Chief) draft a community announcement or event post.
       

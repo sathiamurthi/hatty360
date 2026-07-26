@@ -116,7 +116,7 @@ export async function composeAuthorityLetter(req: Request, res: Response) {
     let address = authorityAddress || `${issue.hatty_name} Panchayat Office, Nilgiris District, Tamil Nadu`;
 
     // Prompt Gemini to compose a highly formal petition letter
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
     const prompt = `
       You are an expert administrative assistant helping draft an official representation to local Indian government authorities (like BDO, Collector, or Panchayat).
       
@@ -177,18 +177,20 @@ export async function composeAuthorityLetter(req: Request, res: Response) {
 }
 
 
-// --- In-App Feedback ---
+// --- In-App Feedback & Ideas ---
 
 export async function submitFeedback(req: Request, res: Response) {
-  const { user_id, rating, comment, context_action } = req.body;
-  if (!rating) {
-    return res.status(400).json({ error: 'Star rating is required' });
+  const { user_id, rating, comment, context_action, type } = req.body;
+  const isIdea = type === 'idea';
+  
+  if (!isIdea && !rating) {
+    return res.status(400).json({ error: 'Star rating is required for feedback' });
   }
 
   try {
     const result = await query(
-      'INSERT INTO feedback (user_id, rating, comment, context_action) VALUES ($1, $2, $3, $4) RETURNING *',
-      [user_id || null, rating, comment || null, context_action || 'general']
+      'INSERT INTO feedback (user_id, rating, comment, context_action, type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [user_id || null, rating || null, comment || null, context_action || 'general', type || 'feedback']
     );
     res.status(201).json({ success: true, feedback: result.rows[0] });
   } catch (err: any) {
@@ -199,7 +201,7 @@ export async function submitFeedback(req: Request, res: Response) {
 export async function getFeedback(req: Request, res: Response) {
   try {
     const result = await query(`
-      SELECT f.*, u.name as user_name, h.name as hatty_name 
+      SELECT f.*, u.name as user_name, u.phone as user_phone, u.email as user_email, h.name as hatty_name 
       FROM feedback f 
       LEFT JOIN users u ON f.user_id = u.id
       LEFT JOIN hattys h ON u.hatty_id = h.id
