@@ -217,9 +217,23 @@ export async function deleteHatty(req: Request, res: Response) {
     return res.status(403).json({ error: 'Access denied. Only SuperAdmin can delete hattys.' });
   }
   try {
+    // Run transaction block to clean up foreign keys and avoid constraint violations
+    await query('BEGIN');
+    await query('UPDATE users SET hatty_id = NULL WHERE hatty_id = $1', [id]);
+    await query('DELETE FROM announcements WHERE hatty_id = $1', [id]);
+    await query('DELETE FROM events WHERE hatty_id = $1', [id]);
+    await query('DELETE FROM fundraising_campaigns WHERE hatty_id = $1', [id]);
+    await query('DELETE FROM donations WHERE hatty_id = $1', [id]);
+    await query('DELETE FROM issues WHERE hatty_id = $1', [id]);
+    await query('DELETE FROM womens_groups WHERE hatty_id = $1', [id]);
     await query('DELETE FROM hattys WHERE id = $1', [id]);
+    await query('COMMIT');
+    
     res.json({ success: true, message: 'Hatty deleted successfully' });
   } catch (err: any) {
+    try {
+      await query('ROLLBACK');
+    } catch (rbErr) {}
     res.status(500).json({ error: err.message });
   }
 }

@@ -986,13 +986,15 @@ export default function AdminDashboard({ user, language }: AdminDashboardProps) 
                           </p>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteVillage(hatty.id)}
-                        className="p-1.5 text-xs text-red-500 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border border-slate-100 bg-slate-50"
-                      >
-                        Delete
-                      </button>
+                      {user?.role === 'SuperAdmin' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVillage(hatty.id)}
+                          className="p-1.5 text-xs text-red-500 rounded-lg hover:bg-red-50 transition-colors cursor-pointer border border-slate-100 bg-slate-50 shrink-0 font-bold"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
